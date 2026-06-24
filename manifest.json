@@ -1,0 +1,46 @@
+{
+  "name": "EvenementKassa Tool",
+  "short_name": "Kassa Tool",
+  "description": "Automatische prijzen, kassa totaal, altijd correct",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#c8442a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "./logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["productivity"],
+  "shortcuts": [
+    {
+      "name": "Kassa Invoeren",
+      "short_name": "Kassa",
+      "description": "Direct naar kassabewegingen",
+      "url": "./index.html?tab=kassabewegingen",
+      "icons": [
+        {
+          "src": "./logo.png",
+          "sizes": "512x512"
+        }
+      ]
+    }
+  ]
+}
