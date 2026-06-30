@@ -598,6 +598,7 @@
                                 <tr>
                                     <th>Artikel</th>
                                     <th>Prijs</th>
+                                    <th>Status</th>
                                     <th>Acties</th>
                                 </tr>
                             </thead>
@@ -1025,7 +1026,8 @@
             prijslijst.push({
                 id: Date.now().toString(),
                 naam: naam,
-                prijs: prijs
+                prijs: prijs,
+                actief: true
             });
 
             localStorage.setItem('kassa_prijslijst', JSON.stringify(prijslijst));
@@ -1049,10 +1051,8 @@
                 <tr>
                     <td>${a.naam}</td>
                     <td>€${a.prijs.toFixed(2)}</td>
-                    <td>
-                        <button class="btn btn-primary btn-sm" onclick="editPrijslijstArtikel('${a.id}')">✏️</button>
-                        <button class="btn btn-danger btn-sm" onclick="removePrijslijstArtikel('${a.id}')">🗑️</button>
-                    </td>
+                    <td><button class="btn btn-sm ${a.actief===false?'btn-warning':'btn-success'}" onclick="toggleArtikelStatus('${a.id}')">${a.actief===false?'⛔ Inactief':'✅ Actief'}</button></td>
+                    <td><button class="btn btn-primary btn-sm" onclick="editPrijslijstArtikel('${a.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="removePrijslijstArtikel('${a.id}')">🗑️</button></td>
                 </tr>
             `).join('');
         }
@@ -1082,7 +1082,9 @@
             showMessage('✅ Artikel gewijzigd!', 'success');
         }
 
-        // ========== STARTBEDRAG ==========
+        
+function toggleArtikelStatus(id){const a=prijslijst.find(x=>x.id===id);if(!a)return;a.actief=a.actief===false?true:false;localStorage.setItem('kassa_prijslijst',JSON.stringify(prijslijst));renderPrijslijst();updateArtikelSelects();showMessage('Status aangepast','success');}
+// ========== STARTBEDRAG ==========
         function updateStartbedragForm() {
             const oorsprong = document.getElementById('kb_oorsprong').value;
             const vrijwilligerDiv = document.getElementById('vrijwilliger_select_div');
@@ -1220,7 +1222,7 @@
             selects.forEach(select => {
                 const value = select.value;
                 select.innerHTML = '<option value="">--</option>' +
-                    prijslijst.map(a => `<option value="${a.id}" data-prijs="${a.prijs}">${a.naam}</option>`).join('');
+                    prijslijst.filter(a=>a.actief!==false).map(a => `<option value="${a.id}" data-prijs="${a.prijs}">${a.naam}</option>`).join('');
                 select.value = value;
             });
         }
@@ -1232,7 +1234,7 @@
             row.innerHTML = `
                 <select onchange="updateSubtotaal()">
                     <option value="">--</option>
-                    ${prijslijst.map(a => `<option value="${a.id}" data-prijs="${a.prijs}">${a.naam}</option>`).join('')}
+                    ${prijslijst.filter(a=>a.actief!==false).map(a => `<option value="${a.id}" data-prijs="${a.prijs}">${a.naam}</option>`).join('')}
                 </select>
                 <input type="number" value="1" min="1" onchange="updateSubtotaal()">
                 <input type="number" disabled value="0.00">
