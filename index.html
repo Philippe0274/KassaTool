@@ -855,6 +855,17 @@
 
     <script>
         // Data
+        const AppState = {
+            version: "1.0.1",
+            safeToReload: true,
+            transactionOpen: false,
+            exportBusy: false,
+            importBusy: false,
+            syncBusy: false,
+            reportBusy: false,
+            modalOpen: false
+        };
+
         let eventInfo = JSON.parse(localStorage.getItem('kassa_event')) || {};
         let personen = JSON.parse(localStorage.getItem('kassa_personen')) || [];
         let prijslijst = JSON.parse(localStorage.getItem('kassa_prijslijst')) || [];
@@ -1756,6 +1767,16 @@
         }
 
         // ========== UTILS ==========
+        function isSafeToReload() {
+            return AppState.safeToReload &&
+                !AppState.transactionOpen &&
+                !AppState.exportBusy &&
+                !AppState.importBusy &&
+                !AppState.syncBusy &&
+                !AppState.reportBusy &&
+                !AppState.modalOpen;
+        }
+
         function showMessage(text, type) {
             const msg = document.getElementById('message');
             msg.textContent = text;
@@ -1765,9 +1786,46 @@
 
         // Register Service Worker (PWA)
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('service-worker.js')
-                .then(registration => console.log('Service Worker registered:', registration))
-                .catch(error => console.log('Service Worker registration failed:', error));
+            window.addEventListener('load', function() {
+                let refreshing = false;
+
+                navigator.serviceWorker.addEventListener('controllerchange', function() {
+                    if (refreshing) return;
+                    if (isSafeToReload()) {
+                        refreshing = true;
+                        window.location.reload();
+                    }
+                });
+
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker registered:', registration);
+
+                        registration.update();
+
+                        function activateNewWorker(worker) {
+                            if (worker) {
+                                worker.postMessage({ type: 'SKIP_WAITING' });
+                            }
+                        }
+
+                        if (registration.waiting && navigator.serviceWorker.controller) {
+                            activateNewWorker(registration.waiting);
+                        }
+
+                        registration.addEventListener('updatefound', function() {
+                            const newWorker = registration.installing;
+                            if (!newWorker) return;
+
+                            newWorker.addEventListener('statechange', function() {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    activateNewWorker(newWorker);
+                                }
+                            });
+                        });
+                    })
+                    .catch(error => console.log('Service Worker registration failed:', error));
+            });
         }
     </script>
 </body>
