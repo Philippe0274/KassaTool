@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.2
+- Stap 3: prijslijst is permanente masterdata van de Kassa Tool.
+- Veiligheid: automatische backup en herstel van de prijslijst via localStorage.
+- Bugfix: reset verwijdert de prijslijst niet meer.
+- Versieverhoging: nieuwe prijslijst-architectuur moet via PWA-update worden opgehaald.
+
 ## 1.1.1
 - Stap 2B: veilige transactiewijziging met behoud van het bestaande transactie-ID.
 - Bugfix: originele transactie blijft behouden tot een wijziging succesvol wordt opgeslagen.

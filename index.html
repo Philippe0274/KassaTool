@@ -857,7 +857,7 @@
     <script>
         // Data
         const AppState = {
-            version: "1.1.1",
+            version: "1.1.2",
             safeToReload: true,
             transactionOpen: false,
             exportBusy: false,
@@ -867,9 +867,12 @@
             modalOpen: false
         };
 
+        const PRIJSLIJST_STORAGE_KEY = 'kassa_prijslijst';
+        const PRIJSLIJST_BACKUP_KEY = 'kassa_prijslijst_backup';
+
         let eventInfo = JSON.parse(localStorage.getItem('kassa_event')) || {};
         let personen = JSON.parse(localStorage.getItem('kassa_personen')) || [];
-        let prijslijst = JSON.parse(localStorage.getItem('kassa_prijslijst')) || [];
+        let prijslijst = loadPermanentePrijslijst();
         let kassabewegingen = JSON.parse(localStorage.getItem('kassa_kassabewegingen')) || [];
         let startbedrag = JSON.parse(localStorage.getItem('kassa_startbedrag')) || { bedrag: 0, oorsprong: '', persoon_id: '', persoon_naam: '' };
         let bewerkingTransactieId = null;
@@ -1027,6 +1030,65 @@
         }
 
         // ========== PRIJSLIJST ==========
+        function leesPrijslijstUitStorage(key) {
+            try {
+                const opgeslagen = localStorage.getItem(key);
+                if (!opgeslagen) return [];
+
+                const parsed = JSON.parse(opgeslagen);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (error) {
+                console.warn(`Ongeldige prijslijst-data in ${key}:`, error);
+                return [];
+            }
+        }
+
+        function isGeldigPrijslijstArtikel(artikel) {
+            return artikel &&
+                typeof artikel === 'object' &&
+                typeof artikel.id === 'string' &&
+                artikel.id.trim() !== '' &&
+                typeof artikel.naam === 'string' &&
+                artikel.naam.trim() !== '' &&
+                Number.isFinite(Number(artikel.prijs));
+        }
+
+        function bevatGeldigePrijslijstArtikelen(lijst) {
+            return Array.isArray(lijst) && lijst.some(isGeldigPrijslijstArtikel);
+        }
+
+        function bewaarPrijslijstBackup(lijst = prijslijst) {
+            if (!bevatGeldigePrijslijstArtikelen(lijst)) return;
+            localStorage.setItem(PRIJSLIJST_BACKUP_KEY, JSON.stringify(lijst));
+        }
+
+        function savePrijslijst() {
+            localStorage.setItem(PRIJSLIJST_STORAGE_KEY, JSON.stringify(prijslijst));
+            bewaarPrijslijstBackup(prijslijst);
+        }
+
+        function loadPermanentePrijslijst() {
+            const actievePrijslijst = leesPrijslijstUitStorage(PRIJSLIJST_STORAGE_KEY);
+            const backupPrijslijst = leesPrijslijstUitStorage(PRIJSLIJST_BACKUP_KEY);
+
+            if (bevatGeldigePrijslijstArtikelen(actievePrijslijst)) {
+                if (!bevatGeldigePrijslijstArtikelen(backupPrijslijst)) {
+                    bewaarPrijslijstBackup(actievePrijslijst);
+                }
+                return actievePrijslijst;
+            }
+
+            if (bevatGeldigePrijslijstArtikelen(backupPrijslijst)) {
+                localStorage.setItem(PRIJSLIJST_STORAGE_KEY, JSON.stringify(backupPrijslijst));
+                window.addEventListener('load', function() {
+                    showMessage('De prijslijst werd automatisch hersteld vanuit de veiligheidskopie.', 'success');
+                }, { once: true });
+                return backupPrijslijst;
+            }
+
+            return actievePrijslijst;
+        }
+
         function addPrijslijstArtikel() {
             const naam = document.getElementById('pl_naam').value.trim();
             const prijs = parseFloat(document.getElementById('pl_prijs').value) || 0;
@@ -1043,7 +1105,7 @@
                 actief: true
             });
 
-            localStorage.setItem('kassa_prijslijst', JSON.stringify(prijslijst));
+            savePrijslijst();
             document.getElementById('pl_naam').value = '';
             document.getElementById('pl_prijs').value = '';
             renderPrijslijst();
@@ -1052,8 +1114,10 @@
         }
 
         function removePrijslijstArtikel(id) {
+            if (!confirm('Artikel verwijderen? Bestaande transacties blijven bewaard.')) return;
+
             prijslijst = prijslijst.filter(a => a.id !== id);
-            localStorage.setItem('kassa_prijslijst', JSON.stringify(prijslijst));
+            savePrijslijst();
             renderPrijslijst();
             updateArtikelSelects();
         }
@@ -1083,7 +1147,7 @@
             if (!artikel) return;
 
             artikel.actief = artikel.actief === false;
-            localStorage.setItem('kassa_prijslijst', JSON.stringify(prijslijst));
+            savePrijslijst();
             renderPrijslijst();
             updateArtikelSelects();
             showMessage(`Artikel ${artikel.actief ? 'actief' : 'inactief'} gezet!`, 'success');
@@ -1108,7 +1172,7 @@
             artikel.naam = newNaam.trim();
             artikel.prijs = newPrijs;
 
-            localStorage.setItem('kassa_prijslijst', JSON.stringify(prijslijst));
+            savePrijslijst();
             renderPrijslijst();
             updateArtikelSelects();
             showMessage('✅ Artikel gewijzigd!', 'success');
@@ -1861,14 +1925,12 @@
         }
 
         function showLeegmakenDialog() {
-            if (confirm('⚠️ Dit wist ALLES!\n\n✅ Personen BLIJVEN behouden\n❌ Event\n❌ Prijslijst\n❌ Kassabewegingen\n\nZeker?')) {
+            if (confirm('⚠️ Dit wist eventgegevens en kassabewegingen!\n\n✅ Personen BLIJVEN behouden\n✅ Prijslijst BLIJFT behouden\n❌ Event\n❌ Kassabewegingen\n\nZeker?')) {
                 eventInfo = {};
-                prijslijst = [];
                 kassabewegingen = [];
                 startbedrag = { bedrag: 0, oorsprong: '', persoon_id: '', persoon_naam: '' };
 
                 localStorage.removeItem('kassa_event');
-                localStorage.removeItem('kassa_prijslijst');
                 localStorage.removeItem('kassa_kassabewegingen');
                 localStorage.removeItem('kassa_startbedrag');
 
@@ -1879,7 +1941,7 @@
                 renderKassabewegingen();
                 loadStartbedrag();
                 updateKasstand();
-                showMessage('🗑️ Reset klaar - Personen behouden!', 'success');
+                showMessage('🗑️ Reset klaar - Personen en prijslijst behouden!', 'success');
             }
         }
 
