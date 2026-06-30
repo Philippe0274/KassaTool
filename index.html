@@ -566,7 +566,7 @@
                                     <th>Email</th>
                                     <th>Tel</th>
                                     <th>IBAN</th>
-                                    <th>Status</th><th>Acties</th>
+                                    <th>Acties</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -598,7 +598,8 @@
                                 <tr>
                                     <th>Artikel</th>
                                     <th>Prijs</th>
-                                    <th>Status</th><th>Acties</th>
+                                    <th>Status</th>
+                                    <th>Acties</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -1026,7 +1027,7 @@
                 id: Date.now().toString(),
                 naam: naam,
                 prijs: prijs,
-                actief:true
+                actief: true
             });
 
             localStorage.setItem('kassa_prijslijst', JSON.stringify(prijslijst));
@@ -1046,18 +1047,33 @@
 
         function renderPrijslijst() {
             const tbody = document.querySelector('#prijslijst_table tbody');
-            prijslijst.forEach(a=>{if(a.actief===undefined)a.actief=true;});
-            tbody.innerHTML = prijslijst.map(a => `
-                <tr>
-                    <td>${a.naam}</td>
-                    <td>€${a.prijs.toFixed(2)}</td>
-                    <td><button class="btn btn-sm ${a.actief?'btn-success':'btn-warning'}" onclick="toggleArtikelStatus('${a.id}')">${a.actief?'🟢 Actief':'⚪ Inactief'}</button></td>
-                    <td>
-                        <button class="btn btn-primary btn-sm" onclick="editPrijslijstArtikel('${a.id}')">✏️</button>
-                        <button class="btn btn-danger btn-sm" onclick="removePrijslijstArtikel('${a.id}')">🗑️</button>
-                    </td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = prijslijst.map(a => {
+                const actief = a.actief !== false;
+                return `
+                    <tr>
+                        <td>${a.naam}</td>
+                        <td>€${a.prijs.toFixed(2)}</td>
+                        <td>
+                            <button class="btn ${actief ? 'btn-success' : 'btn-info'} btn-sm" onclick="toggleArtikelActief('${a.id}')">${actief ? '🟢 Actief' : '⚪ Inactief'}</button>
+                        </td>
+                        <td>
+                            <button class="btn btn-primary btn-sm" onclick="editPrijslijstArtikel('${a.id}')">✏️</button>
+                            <button class="btn btn-danger btn-sm" onclick="removePrijslijstArtikel('${a.id}')">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function toggleArtikelActief(id) {
+            const artikel = prijslijst.find(a => a.id === id);
+            if (!artikel) return;
+
+            artikel.actief = artikel.actief === false;
+            localStorage.setItem('kassa_prijslijst', JSON.stringify(prijslijst));
+            renderPrijslijst();
+            updateArtikelSelects();
+            showMessage(`Artikel ${artikel.actief ? 'actief' : 'inactief'} gezet!`, 'success');
         }
 
         function editPrijslijstArtikel(id) {
@@ -1085,16 +1101,7 @@
             showMessage('✅ Artikel gewijzigd!', 'success');
         }
 
-        
-        function toggleArtikelStatus(id){
-            const a=prijslijst.find(x=>x.id===id);
-            if(!a)return;
-            a.actief=!a.actief;
-            localStorage.setItem('kassa_prijslijst', JSON.stringify(prijslijst));
-            renderPrijslijst();
-            updateArtikelSelects();
-        }
-// ========== STARTBEDRAG ==========
+        // ========== STARTBEDRAG ==========
         function updateStartbedragForm() {
             const oorsprong = document.getElementById('kb_oorsprong').value;
             const vrijwilligerDiv = document.getElementById('vrijwilliger_select_div');
@@ -1232,7 +1239,7 @@
             selects.forEach(select => {
                 const value = select.value;
                 select.innerHTML = '<option value="">--</option>' +
-                    prijslijst.filter(a=>a.actief!==false).map(a => `<option value="${a.id}" data-prijs="${a.prijs}">${a.naam}</option>`).join('');
+                    prijslijst.filter(a => a.actief !== false).map(a => `<option value="${a.id}" data-prijs="${a.prijs}">${a.naam}</option>`).join('');
                 select.value = value;
             });
         }
@@ -1244,7 +1251,7 @@
             row.innerHTML = `
                 <select onchange="updateSubtotaal()">
                     <option value="">--</option>
-                    ${prijslijst.filter(a=>a.actief!==false).map(a => `<option value="${a.id}" data-prijs="${a.prijs}">${a.naam}</option>`).join('')}
+                    ${prijslijst.filter(a => a.actief !== false).map(a => `<option value="${a.id}" data-prijs="${a.prijs}">${a.naam}</option>`).join('')}
                 </select>
                 <input type="number" value="1" min="1" onchange="updateSubtotaal()">
                 <input type="number" disabled value="0.00">
