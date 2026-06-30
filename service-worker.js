@@ -1,15 +1,15 @@
-const APP_VERSION = "1.0.3";
+const APP_VERSION = "1.0.4";
 const CACHE_NAME = `kassa-tool-${APP_VERSION}`;
 const CACHE_PREFIX = 'kassa-tool-';
 const FALLBACK_DOCUMENTS = [
-    './index_kassa%20tool.html',
+    './index.html',
     './'
 ];
 
 self.addEventListener('install', event => {
     event.waitUntil((async () => {
         const cache = await caches.open(CACHE_NAME);
-        await cache.addAll(['./index_kassa%20tool.html']);
+        await cache.addAll(['./index.html']);
         await self.skipWaiting();
     })());
 });
