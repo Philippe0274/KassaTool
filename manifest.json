@@ -2,7 +2,7 @@
   "name": "Kassa Tool",
   "short_name": "Kassa",
   "description": "Kassa Tool voor evenemententransacties",
-  "start_url": "./index.html",
+  "start_url": "./index_kassa%20tool.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f5f1ea",

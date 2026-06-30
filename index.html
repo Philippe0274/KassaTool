@@ -856,7 +856,7 @@
     <script>
         // Data
         const AppState = {
-            version: "1.0.2",
+            version: "1.1.0",
             safeToReload: true,
             transactionOpen: false,
             exportBusy: false,
@@ -1249,8 +1249,24 @@
             const selects = document.querySelectorAll('.artikel-item select');
             selects.forEach(select => {
                 const value = select.value;
-                select.innerHTML = '<option value="">--</option>' +
-                    prijslijst.filter(a => a.actief !== false).map(a => `<option value="${a.id}" data-prijs="${a.prijs}">${a.naam}</option>`).join('');
+                const historischId = select.dataset.historischId || '';
+                const isHistorischeSelectie = historischId && value === historischId;
+                let options = '<option value="">--</option>';
+
+                if (isHistorischeSelectie) {
+                    options += renderArtikelOption({
+                        id: historischId,
+                        naam: select.dataset.historischNaam || 'Onbekend artikel',
+                        prijs: toNumber(select.dataset.historischPrijs, 0)
+                    }, true, 'data-historisch="true"');
+                }
+
+                options += prijslijst
+                    .filter(a => a.actief !== false && (!isHistorischeSelectie || a.id !== historischId))
+                    .map(a => renderArtikelOption(a))
+                    .join('');
+
+                select.innerHTML = options;
                 select.value = value;
             });
         }
@@ -1262,7 +1278,7 @@
             row.innerHTML = `
                 <select onchange="updateSubtotaal()">
                     <option value="">--</option>
-                    ${prijslijst.filter(a => a.actief !== false).map(a => `<option value="${a.id}" data-prijs="${a.prijs}">${a.naam}</option>`).join('')}
+                    ${prijslijst.filter(a => a.actief !== false).map(a => renderArtikelOption(a)).join('')}
                 </select>
                 <input type="number" value="1" min="1" onchange="updateSubtotaal()">
                 <input type="number" disabled value="0.00">
@@ -1271,14 +1287,75 @@
             list.appendChild(row);
         }
 
+        function escapeHtml(value) {
+            return String(value === undefined || value === null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function toNumber(value, fallback = 0) {
+            const number = Number(value);
+            return Number.isFinite(number) ? number : fallback;
+        }
+
+        function renderArtikelOption(artikel, selected = false, extraAttributes = '') {
+            const prijs = toNumber(artikel.prijs, 0);
+            const selectedAttribute = selected ? ' selected' : '';
+            const extra = extraAttributes ? ` ${extraAttributes}` : '';
+            return `<option value="${escapeHtml(artikel.id)}" data-prijs="${prijs}" data-naam="${escapeHtml(artikel.naam)}"${selectedAttribute}${extra}>${escapeHtml(artikel.naam)}</option>`;
+        }
+
+        function getHistorischArtikelSnapshot(artikel, index) {
+            const aantal = toNumber(artikel && artikel.aantal, 0);
+            const opgeslagenSubtotaal = toNumber(artikel && artikel.subtotaal, NaN);
+            let prijs = toNumber(artikel && artikel.prijs_gebruikt, NaN);
+
+            if (!Number.isFinite(prijs) && aantal > 0 && Number.isFinite(opgeslagenSubtotaal)) {
+                prijs = opgeslagenSubtotaal / aantal;
+            }
+
+            if (!Number.isFinite(prijs)) prijs = 0;
+
+            return {
+                id: artikel && artikel.id ? artikel.id : `historisch-${index}`,
+                naam: artikel && artikel.naam ? artikel.naam : 'Onbekend artikel',
+                prijs: prijs,
+                aantal: aantal,
+                subtotaal: Number.isFinite(opgeslagenSubtotaal) ? opgeslagenSubtotaal : aantal * prijs
+            };
+        }
+
+        function getArtikelSnapshotFromRow(row) {
+            const select = row.querySelector('select');
+            const aantalInput = row.querySelector('input[type="number"]');
+            const aantal = toNumber(aantalInput ? aantalInput.value : 0, 0);
+
+            if (!select || !select.value) return null;
+
+            const selectedOption = select.options[select.selectedIndex];
+            const artikel = prijslijst.find(a => a.id === select.value);
+            const prijsUitOptie = selectedOption ? toNumber(selectedOption.dataset.prijs, NaN) : NaN;
+            const prijs = Number.isFinite(prijsUitOptie) ? prijsUitOptie : (artikel ? toNumber(artikel.prijs, 0) : 0);
+            const naamUitOptie = selectedOption && selectedOption.dataset.naam ? selectedOption.dataset.naam : '';
+            const naam = naamUitOptie || (artikel ? artikel.naam : (selectedOption ? selectedOption.textContent : ''));
+
+            return {
+                id: select.value,
+                naam: naam || 'Onbekend artikel',
+                prijs_gebruikt: prijs,
+                aantal: aantal,
+                subtotaal: aantal * prijs
+            };
+        }
+
         function updateSubtotaal() {
             let total = 0;
             document.querySelectorAll('.artikel-item').forEach(row => {
-                const select = row.querySelector('select');
-                const aantal = parseFloat(row.querySelector('input[type="number"]').value) || 0;
-                const artikel = prijslijst.find(a => a.id === select.value);
-                const prijs = artikel ? artikel.prijs : 0;
-                const sub = aantal * prijs;
+                const snapshot = getArtikelSnapshotFromRow(row);
+                const sub = snapshot ? snapshot.subtotaal : 0;
                 row.querySelectorAll('input')[1].value = sub.toFixed(2);
                 total += sub;
             });
@@ -1296,11 +1373,9 @@
 
             let artikelen = [];
             document.querySelectorAll('.artikel-item').forEach(row => {
-                const select = row.querySelector('select');
-                const aantal = parseFloat(row.querySelector('input[type="number"]').value) || 0;
-                const artikel = prijslijst.find(a => a.id === select.value);
-                if (artikel && aantal > 0) {
-                    artikelen.push(`${aantal}x ${artikel.naam} (€${artikel.prijs.toFixed(2)} = €${(aantal * artikel.prijs).toFixed(2)})`);
+                const snapshot = getArtikelSnapshotFromRow(row);
+                if (snapshot && snapshot.aantal > 0) {
+                    artikelen.push(`${snapshot.aantal}x ${snapshot.naam} (€${snapshot.prijs_gebruikt.toFixed(2)} = €${snapshot.subtotaal.toFixed(2)})`);
                 }
             });
 
@@ -1365,17 +1440,9 @@
                 // NORMALE TRANSACTIE - ARTIKELEN NODIG
                 const artikelen = [];
                 document.querySelectorAll('.artikel-item').forEach(row => {
-                    const select = row.querySelector('select');
-                    const aantal = parseFloat(row.querySelector('input[type="number"]').value) || 0;
-                    const artikel = prijslijst.find(a => a.id === select.value);
-                    if (artikel && aantal > 0) {
-                        artikelen.push({
-                            id: artikel.id,
-                            naam: artikel.naam,
-                            prijs_gebruikt: artikel.prijs,
-                            aantal: aantal,
-                            subtotaal: aantal * artikel.prijs
-                        });
+                    const artikelSnapshot = getArtikelSnapshotFromRow(row);
+                    if (artikelSnapshot && artikelSnapshot.aantal > 0) {
+                        artikelen.push(artikelSnapshot);
                     }
                 });
 
@@ -1437,22 +1504,21 @@
             } else {
                 const list = document.getElementById('artikelen_list');
                 list.innerHTML = '';
-                t.artikelen.forEach(a => {
-                    const artikel = prijslijst.find(p => p.id === a.id);
-                    if (artikel) {
-                        const row = document.createElement('div');
-                        row.className = 'artikel-item';
-                        row.innerHTML = `
-                            <select onchange="updateSubtotaal()" value="${a.id}">
-                                <option value="">--</option>
-                                ${prijslijst.map(p => `<option value="${p.id}" ${p.id === a.id ? 'selected' : ''}>${p.naam}</option>`).join('')}
-                            </select>
-                            <input type="number" value="${a.aantal}" min="1" onchange="updateSubtotaal()">
-                            <input type="number" disabled value="${(a.aantal * prijslijst.find(x => x.id === a.id).prijs).toFixed(2)}">
-                            <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove(); updateSubtotaal();">🗑️</button>
-                        `;
-                        list.appendChild(row);
-                    }
+                (t.artikelen || []).forEach((a, index) => {
+                    const snapshot = getHistorischArtikelSnapshot(a, index);
+                    const row = document.createElement('div');
+                    row.className = 'artikel-item';
+                    row.innerHTML = `
+                        <select onchange="updateSubtotaal()" data-historisch-id="${escapeHtml(snapshot.id)}" data-historisch-naam="${escapeHtml(snapshot.naam)}" data-historisch-prijs="${snapshot.prijs}">
+                            <option value="">--</option>
+                            ${renderArtikelOption({ id: snapshot.id, naam: snapshot.naam, prijs: snapshot.prijs }, true, 'data-historisch="true"')}
+                            ${prijslijst.filter(p => p.actief !== false && p.id !== snapshot.id).map(p => renderArtikelOption(p)).join('')}
+                        </select>
+                        <input type="number" value="${snapshot.aantal}" min="1" onchange="updateSubtotaal()">
+                        <input type="number" disabled value="${snapshot.subtotaal.toFixed(2)}">
+                        <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove(); updateSubtotaal();">🗑️</button>
+                    `;
+                    list.appendChild(row);
                 });
             }
 
@@ -1466,7 +1532,6 @@
             showMessage('✏️ Transactie in WIJZIG mode - pas aan en klik EINDE TRANSACTIE', 'warning');
             switchTab('kassabewegingen');
         }
-
         function renderKassabewegingen() {
             const list = document.getElementById('kassabewegingen_list');
             if (kassabewegingen.length === 0) {
@@ -1496,7 +1561,7 @@
                             impact = t.klant_gegeven;
                         }
                     }
-                    title = `${t.artikelen.map(a => a.naam).join(', ')}`;
+                    title = `${(t.artikelen || []).map((a, index) => getHistorischArtikelSnapshot(a, index).naam).join(', ')}`;
                 }
 
                 return `
@@ -1524,14 +1589,17 @@
                                         <th style="padding: 8px;">Prijs</th>
                                         <th style="padding: 8px;">Subtot.</th>
                                     </tr>
-                                    ${t.artikelen.map(a => `
-                                        <tr>
-                                            <td style="padding: 8px;">${a.naam}</td>
-                                            <td style="padding: 8px;">x${a.aantal}</td>
-                                            <td style="padding: 8px;">€${a.prijs_gebruikt.toFixed(2)}</td>
-                                            <td style="padding: 8px; font-weight: 600;">€${a.subtotaal.toFixed(2)}</td>
-                                        </tr>
-                                    `).join('')}
+                                    ${(t.artikelen || []).map((a, index) => {
+                                        const snapshot = getHistorischArtikelSnapshot(a, index);
+                                        return `
+                                            <tr>
+                                                <td style="padding: 8px;">${snapshot.naam}</td>
+                                                <td style="padding: 8px;">x${snapshot.aantal}</td>
+                                                <td style="padding: 8px;">€${snapshot.prijs.toFixed(2)}</td>
+                                                <td style="padding: 8px; font-weight: 600;">€${snapshot.subtotaal.toFixed(2)}</td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
                                 </table>
                             `}
                             <div style="padding: 10px; background: #fffbf0; border-radius: 4px; margin-bottom: 10px; font-size: 0.85em; white-space: pre-wrap;">
