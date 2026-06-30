@@ -1,4 +1,4 @@
-const APP_VERSION = "1.0.2";
+const APP_VERSION = "1.0.3";
 const CACHE_NAME = `kassa-tool-${APP_VERSION}`;
 const CACHE_PREFIX = 'kassa-tool-';
 const FALLBACK_DOCUMENTS = [
@@ -48,15 +48,16 @@ async function networkFirstDocument(request) {
     }
 
     const cache = await caches.open(CACHE_NAME);
+    const cacheKey = new Request(request.url, { method: 'GET' });
 
     try {
         const networkResponse = await fetch(request);
         if (networkResponse && networkResponse.ok) {
-            await cache.put(request, networkResponse.clone());
+            await cache.put(cacheKey, networkResponse.clone());
         }
         return networkResponse;
     } catch (error) {
-        const cachedResponse = await cache.match(request);
+        const cachedResponse = await cache.match(cacheKey);
         if (cachedResponse) return cachedResponse;
 
         for (const fallbackUrl of FALLBACK_DOCUMENTS) {
