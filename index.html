@@ -1,0 +1,1774 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="theme-color" content="#c8442a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Kassa Tool">
+    <link rel="apple-touch-icon" href="./logo.png">
+    <link rel="icon" type="image/png" href="./logo.png">
+    <link rel="manifest" href="./manifest.json">
+    <title>EvenementKassa Tool - Automatische prijzen • Kassa totaal • Altijd correct</title>
+    <style>
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f5f1ea;
+            color: #1a1612;
+            height: 100%;
+        }
+        .app-wrapper {
+            display: flex;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        .app-header {
+            background: #c8442a;
+            color: white;
+            padding: 15px 20px;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .app-header h1 { margin: 0; font-size: 1.5em; }
+        .app-header-actions { display: flex; gap: 10px; }
+        
+        /* Logo styling */
+        .app-header img {
+            height: 50px;
+            width: 50px;
+            border-radius: 6px;
+        }
+
+        .tabs-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        .tabs-sidebar {
+            width: 180px;
+            background: white;
+            border-right: 2px solid #ddd;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        .tab-btn {
+            width: 100%;
+            padding: 15px 10px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 0.9em;
+            color: #666;
+            text-align: left;
+            border-left: 4px solid transparent;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover { background: #f5f5f5; }
+        .tab-btn.active {
+            background: #fffbf0;
+            color: #c8442a;
+            border-left-color: #c8442a;
+            font-weight: 600;
+        }
+
+        .tab-content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .section {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #c8442a;
+            border-bottom: 2px solid #c8442a;
+            padding-bottom: 10px;
+        }
+        .section h3 {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            color: #5c544a;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .form-row.full { grid-template-columns: 1fr; }
+        
+        input, select, textarea {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.95em;
+            font-family: inherit;
+        }
+        /* Remove number spinner */
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #c8442a;
+            box-shadow: 0 0 0 2px rgba(200, 68, 42, 0.1);
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #5c544a;
+            font-size: 0.9em;
+        }
+
+        .btn {
+            padding: 12px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.95em;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        .btn-primary { background: #c8442a; color: white; }
+        .btn-primary:hover { background: #a8341f; }
+        .btn-success { background: #4a6b3a; color: white; }
+        .btn-success:hover { background: #3a5b2a; }
+        .btn-danger { background: #d9534f; color: white; }
+        .btn-danger:hover { background: #c9423f; }
+        .btn-warning { background: #f0ad4e; color: white; }
+        .btn-warning:hover { background: #ec971f; }
+        .btn-info { background: #5bc0de; color: white; }
+        .btn-info:hover { background: #46b8da; }
+        .btn-sm { padding: 8px 12px; font-size: 0.85em; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th {
+            background: #f5f5f5;
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #ddd;
+            font-size: 0.9em;
+        }
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            font-size: 0.9em;
+        }
+        tr:hover { background: #f9f9f9; }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .modal.show { display: block; }
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 40px;
+            max-width: 1000px;
+            width: 100%;
+            margin: 0 auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .rapport-header {
+            text-align: center;
+            border-bottom: 3px solid #c8442a;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .rapport-header h1 {
+            margin: 0;
+            color: #c8442a;
+            font-size: 2em;
+        }
+        .rapport-header p {
+            margin: 5px 0;
+            color: #666;
+        }
+
+        .rapport-section {
+            margin-bottom: 30px;
+        }
+        .rapport-section h2 {
+            font-size: 1.2em;
+            color: #c8442a;
+            border-bottom: 2px solid #c8442a;
+            padding-bottom: 10px;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .info-row {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { font-weight: 600; color: #5c544a; }
+        .info-value { text-align: right; }
+
+        .transactie-tabel {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+        .transactie-tabel thead {
+            background: #f5f5f5;
+            border-top: 2px solid #c8442a;
+            border-bottom: 2px solid #c8442a;
+        }
+        .transactie-tabel th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        .transactie-tabel td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        .transactie-tabel tbody tr:hover { background: #fffbf0; }
+        .transactie-details { font-size: 0.85em; color: #666; margin-top: 5px; }
+
+        .kasstand-calc {
+            background: #fffbf0;
+            border-left: 4px solid #c8442a;
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .calc-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        .calc-row:last-child {
+            border-bottom: none;
+            padding-top: 15px;
+            border-top: 2px solid #c8442a;
+            font-weight: 700;
+            font-size: 1.1em;
+            color: #c8442a;
+        }
+        .calc-label { font-weight: 500; color: #5c544a; }
+        .calc-value { text-align: right; font-family: 'Courier New', monospace; }
+        .calc-value.positive { color: #4a6b3a; }
+        .calc-value.negative { color: #d9534f; }
+
+        .eindsaldo-box {
+            background: linear-gradient(135deg, #c8442a 0%, #a8341f 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .eindsaldo-box p { margin: 0; font-size: 0.95em; opacity: 0.9; }
+        .eindsaldo-box .amount {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin: 10px 0 0 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .rapport-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            justify-content: center;
+            border-top: 2px solid #ddd;
+            padding-top: 20px;
+        }
+
+        /* Popup */
+        .popup {
+            display: none;
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            background: white;
+            border: 2px solid #c8442a;
+            border-radius: 8px;
+            padding: 20px;
+            min-width: 300px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 1500;
+        }
+        .popup.show { display: block; }
+        .popup h3 { margin-top: 0; color: #c8442a; }
+        .popup .kasstand-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #c8442a;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+        }
+        .popup .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .message {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            max-width: 400px;
+            z-index: 1000;
+        }
+        .message.show { display: block; }
+        .message.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .message.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        .artikel-item {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr auto;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: flex-end;
+        }
+        .artikel-item input, .artikel-item select {
+            padding: 8px;
+            font-size: 0.85em;
+        }
+        .artikel-item input[type="number"]:disabled {
+            background: #f5f5f5;
+            color: #999;
+        }
+
+        .info-box {
+            background: #fffbf0;
+            border-left: 4px solid #c8442a;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+
+        .kasstand-box {
+            background: white;
+            border: 2px solid #c8442a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .kasstand-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 20px;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .kasstand-row:last-child {
+            border-bottom: none;
+            padding-top: 10px;
+            border-top: 2px solid #c8442a;
+            font-weight: 700;
+            font-size: 1.1em;
+            color: #c8442a;
+        }
+
+        @media (max-width: 1024px) {
+            .tabs-sidebar { width: 150px; }
+            .form-row { grid-template-columns: 1fr; }
+            .artikel-item { grid-template-columns: 1fr 1fr 1fr auto; }
+            .info-grid { grid-template-columns: 1fr; }
+            .modal-content { padding: 20px; }
+            .app-header { padding: 10px 12px; }
+            .app-header h1 { font-size: 1.1em; }
+            .app-header img { height: 48px; }
+            .app-header-actions .btn-sm { padding: 8px 10px; font-size: 0.75em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-wrapper">
+        <!-- Header -->
+        <div class="app-header">
+            <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" style="height: 50px; width: 50px; border-radius: 6px; background: white;">
+                  <!-- Red circle background -->
+                  <circle cx="100" cy="100" r="95" fill="#c8442a"/>
+                  
+                  <!-- White inner circle -->
+                  <circle cx="100" cy="100" r="85" fill="white"/>
+                  
+                  <!-- Cash register icon -->
+                  <g fill="#c8442a">
+                    <!-- Register body -->
+                    <rect x="40" y="60" width="120" height="70" rx="4" fill="#c8442a"/>
+                    
+                    <!-- Register display -->
+                    <rect x="50" y="70" width="100" height="25" rx="2" fill="white"/>
+                    <text x="100" y="88" text-anchor="middle" font-size="18" font-weight="bold" fill="#c8442a">€1,25</text>
+                    
+                    <!-- Register buttons -->
+                    <circle cx="60" cy="115" r="6" fill="white"/>
+                    <circle cx="100" cy="115" r="6" fill="white"/>
+                    <circle cx="140" cy="115" r="6" fill="white"/>
+                    
+                    <!-- Register drawer -->
+                    <rect x="45" y="130" width="110" height="15" rx="2" fill="#e8b4a0"/>
+                  </g>
+                </svg>
+                <h1 style="white-space: nowrap;">💳 Kassa Tool</h1>
+            </div>
+            <div class="app-header-actions">
+                <button class="btn btn-info btn-sm" onclick="showKassaPopup()">💰 KASSA</button>
+                <button class="btn btn-primary btn-sm" onclick="showPreview('view')">👁️ PREVIEW</button>
+                <button class="btn btn-primary btn-sm" onclick="downloadJSON()">📥 EXPORT</button>
+                <button class="btn btn-warning btn-sm" onclick="showLeegmakenDialog()">🗑️ RESET</button>
+            </div>
+        </div>
+
+        <!-- Main -->
+        <div class="tabs-container">
+            <!-- Sidebar -->
+            <div class="tabs-sidebar">
+                <button class="tab-btn active" onclick="switchTab('event')">📅 Event</button>
+                <button class="tab-btn" onclick="switchTab('personen')">👥 Personen</button>
+                <button class="tab-btn" onclick="switchTab('prijslijst')">📋 Prijslijst</button>
+                <button class="tab-btn" onclick="switchTab('kassabewegingen')">💳 Kassa</button>
+            </div>
+
+            <!-- Content -->
+            <div class="tab-content-area">
+                <div id="message" class="message"></div>
+
+                <!-- EVENT Tab -->
+                <div id="event" class="tab-content active">
+                    <div class="section">
+                        <h2>📅 Event Gegevens</h2>
+
+                        <div class="form-row">
+                            <div>
+                                <label>Eventnaam</label>
+                                <input type="text" id="ev_naam" placeholder="Bijv. Zomerfestival 2024">
+                            </div>
+                            <div>
+                                <label>Locatie</label>
+                                <input type="text" id="ev_locatie" placeholder="Bijv. Zaal De Vriendschap">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div>
+                                <label>Datum Event</label>
+                                <input type="date" id="ev_datum">
+                            </div>
+                        </div>
+
+                        <button class="btn btn-success" onclick="saveEventInfo()">💾 Opslaan</button>
+                    </div>
+                </div>
+
+                <!-- PERSONEN Tab -->
+                <div id="personen" class="tab-content">
+                    <div class="section">
+                        <h2>👥 Personen Beheer</h2>
+                        <p style="color: #666; font-size: 0.9em;">Deze info wordt NIET verwijderd bij reset</p>
+
+                        <h3>➕ Nieuwe persoon toevoegen</h3>
+                        <div class="form-row">
+                            <div>
+                                <label>Naam</label>
+                                <input type="text" id="per_naam" placeholder="De Vries">
+                            </div>
+                            <div>
+                                <label>Voornaam</label>
+                                <input type="text" id="per_voornaam" placeholder="Jan">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div>
+                                <label>📧 Email</label>
+                                <input type="email" id="per_email" placeholder="jan@example.com">
+                            </div>
+                            <div>
+                                <label>📱 Telefoonnummer</label>
+                                <input type="tel" id="per_tel" placeholder="0123 456 789">
+                            </div>
+                        </div>
+
+                        <div class="form-row full">
+                            <div>
+                                <label>🏦 Rekeningnummer (IBAN)</label>
+                                <input type="text" id="per_iban" placeholder="BE12 1234 5678 9012" onchange="validateIBAN()">
+                                <div id="iban_error" class="error-text" style="display: none; color: #d9534f; font-size: 0.8em;">❌ Ongeldig Belgisch IBAN</div>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary" onclick="addPersoon()">➕ Persoon toevoegen</button>
+
+                        <h3 style="margin-top: 30px;">Personen Lijst</h3>
+                        <table id="personen_table">
+                            <thead>
+                                <tr>
+                                    <th>Naam</th>
+                                    <th>Voornaam</th>
+                                    <th>Email</th>
+                                    <th>Tel</th>
+                                    <th>IBAN</th>
+                                    <th>Acties</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- PRIJSLIJST Tab -->
+                <div id="prijslijst" class="tab-content">
+                    <div class="section">
+                        <h2>📋 Prijslijst</h2>
+
+                        <h3>➕ Nieuw artikel</h3>
+                        <div class="form-row">
+                            <div>
+                                <label>Artikel naam</label>
+                                <input type="text" id="pl_naam" placeholder="Bijv. Bier">
+                            </div>
+                            <div>
+                                <label>Prijs (€)</label>
+                                <input type="number" id="pl_prijs" placeholder="0.00" step="0.01">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="addPrijslijstArtikel()">➕ Artikel toevoegen</button>
+
+                        <h3 style="margin-top: 30px;">Artikelen</h3>
+                        <table id="prijslijst_table">
+                            <thead>
+                                <tr>
+                                    <th>Artikel</th>
+                                    <th>Prijs</th>
+                                    <th>Status</th>
+                                    <th>Acties</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- KASSABEWEGINGEN Tab -->
+                <div id="kassabewegingen" class="tab-content">
+                    <!-- Startbedrag -->
+                    <div class="section">
+                        <h2>💰 Startbedrag Kassa</h2>
+                        
+                        <div class="form-row">
+                            <div>
+                                <label>Bedrag (€)</label>
+                                <input type="number" id="kb_startbedrag" placeholder="0.00" step="0.01" onchange="updateStartbedragForm()">
+                            </div>
+                            <div>
+                                <label>Afkomstig van:</label>
+                                <select id="kb_oorsprong" onchange="updateStartbedragForm()">
+                                    <option value="">-- Selecteer --</option>
+                                    <option value="partij">🏢 Partij/Organisatie</option>
+                                    <option value="vrijwilliger">👤 Vrijwilliger</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="vrijwilliger_select_div" style="display: none;">
+                            <div class="form-row full">
+                                <label>Welke vrijwilliger?</label>
+                                <select id="kb_vrijwilliger" onchange="updateKasstand()">
+                                    <option value="">-- Selecteer vrijwilliger --</option>
+                                </select>
+                            </div>
+                            <div id="vrijwilliger_info_box" class="info-box" style="display: none;"></div>
+                        </div>
+
+                        <button class="btn btn-success" onclick="saveStartbedrag()">💾 Opslaan</button>
+                    </div>
+
+                    <!-- Input Form -->
+                    <div class="section">
+                        <h2>➕ Nieuwe Transactie</h2>
+
+                        <div class="form-row">
+                            <div>
+                                <label>⏰ Uur</label>
+                                <input type="time" id="kb_uur" onfocus="setCurrentTime()">
+                            </div>
+                            <div>
+                                <label>💳 Betalingswijze</label>
+                                <select id="kb_betaling" onchange="updateScenarios()">
+                                    <option value="cash">💵 CASH</option>
+                                    <option value="kaart">💳 KAART</option>
+                                    <option value="gift">🎁 GIFT (geen aankoop)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div>
+                                <label>💵 Klant gegeven (€)</label>
+                                <input type="number" id="kb_klant" placeholder="0.00" step="0.01" onchange="updateSubtotaal()">
+                            </div>
+                            <div>
+                                <label>🎯 Scenario</label>
+                                <select id="kb_scenario">
+                                    <option value="exact">Exact</option>
+                                    <option value="wisselgeld">Wisselgeld</option>
+                                    <option value="gift">Gift</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <h3>📦 Artikelen <span id="artikelen_optional" style="font-size: 0.8em; color: #999;">(optioneel)</span></h3>
+                        <div id="artikelen_list"></div>
+                        <button class="btn btn-primary btn-sm" onclick="addArtikelRow()" style="margin-bottom: 15px;" id="add_artikel_btn">➕ Artikel</button>
+
+                        <div style="background: #fffbf0; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                            <strong>💰 Totaal:</strong>
+                            <input type="number" id="kb_subtotaal" disabled value="0.00" style="font-size: 1.2em; font-weight: 600; margin-top: 5px; padding: 10px;">
+                        </div>
+
+                        <div class="form-row full" style="margin-bottom: 15px;">
+                            <label>📝 Opmerking</label>
+                            <textarea id="kb_opmerking" rows="3" readonly style="background: #f5f5f5;"></textarea>
+                        </div>
+
+                        <button class="btn btn-success" style="width: 100%; padding: 15px; font-size: 1em;" onclick="addKasTransactie()">✅ EINDE TRANSACTIE</button>
+                    </div>
+
+                    <!-- Transacties -->
+                    <div class="section">
+                        <h2>📋 Transacties</h2>
+                        <div id="kassabewegingen_list"></div>
+                    </div>
+
+                    <!-- Kasstand -->
+                    <div class="kasstand-box">
+                        <h2 style="margin-top: 0;">📈 Kasstand</h2>
+                        <div class="kasstand-row">
+                            <span>Startbedrag kas:</span>
+                            <span id="ks_startbedrag">€ 0,00</span>
+                        </div>
+                        <div class="kasstand-row">
+                            <span>Totaal CASH inkomsten:</span>
+                            <span id="ks_inkomsten" style="color: #4a6b3a;">+ € 0,00</span>
+                        </div>
+                        <div class="kasstand-row">
+                            <span>Totaal uitgaven:</span>
+                            <span id="ks_uitgaven" style="color: #d9534f;">- € 0,00</span>
+                        </div>
+                        <div class="kasstand-row">
+                            <span>Terugbetaling:</span>
+                            <span id="ks_terugbetaling" style="color: #d9534f;">- € 0,00</span>
+                        </div>
+                        <div class="kasstand-row">
+                            <span>Verwacht eindsaldo:</span>
+                            <span id="ks_eindsaldo">€ 0,00</span>
+                        </div>
+                    </div>
+
+                    <!-- Afsluiten Kassa -->
+                    <div style="margin-top: 30px;">
+                        <button class="btn btn-danger" style="width: 100%; padding: 15px; font-size: 1em;" onclick="showPreview('close')">🔒 AFSLUITEN KASSA</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KASSA Popup -->
+    <div id="kassaPopup" class="popup">
+        <button class="close-btn" onclick="closeKassaPopup()">✕</button>
+        <h3>💰 HUIDGE KASSTAND</h3>
+        <div class="kasstand-value" id="popup_kasstand">€ 0,00</div>
+        <p style="font-size: 0.9em; color: #666; margin: 10px 0 0 0;">Real-time berekend</p>
+    </div>
+
+    <!-- Preview Modal -->
+    <div id="previewModal" class="modal">
+        <div class="modal-content">
+            <!-- Header -->
+            <div class="rapport-header">
+                <h1>💳 KASRAPPORT</h1>
+                <p>Afsluiting kassa - Eindresultaat</p>
+            </div>
+
+            <!-- Event Info -->
+            <div class="rapport-section">
+                <h2>📅 Event Informatie</h2>
+                <div class="info-grid">
+                    <div>
+                        <div class="info-row">
+                            <span class="info-label">Eventnaam:</span>
+                            <span class="info-value" id="rap_naam">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Locatie:</span>
+                            <span class="info-value" id="rap_locatie">-</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="info-row">
+                            <span class="info-label">Datum:</span>
+                            <span class="info-value" id="rap_datum">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Afgesloten:</span>
+                            <span class="info-value" id="rap_tijd">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Startbedrag -->
+            <div class="rapport-section">
+                <h2>💰 Startbedrag Kassa</h2>
+                <div class="info-grid">
+                    <div>
+                        <div class="info-row">
+                            <span class="info-label">Bedrag:</span>
+                            <span class="info-value" id="rap_startbedrag">€ 0,00</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="info-row">
+                            <span class="info-label">Afkomstig van:</span>
+                            <span class="info-value" id="rap_oorsprong">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transacties Tabel -->
+            <div class="rapport-section">
+                <h2>📋 Alle Transacties</h2>
+                <table class="transactie-tabel" id="rap_transacties_tabel">
+                    <thead>
+                        <tr>
+                            <th>⏰ Uur</th>
+                            <th>📦 Artikelen / Type</th>
+                            <th>💳 Betaling</th>
+                            <th>📊 Details</th>
+                            <th style="text-align: right;">💰 Kas Impact</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <!-- Kasstand Berekening -->
+            <div class="rapport-section">
+                <h2>📈 Kasstand Berekening</h2>
+                <div class="kasstand-calc">
+                    <div class="calc-row">
+                        <span class="calc-label">Startbedrag kassa:</span>
+                        <span class="calc-value" id="calc_start">€ 0,00</span>
+                    </div>
+                    <div class="calc-row">
+                        <span class="calc-label">+ CASH inkomsten:</span>
+                        <span class="calc-value positive" id="calc_in">+ € 0,00</span>
+                    </div>
+                    <div class="calc-row">
+                        <span class="calc-label">- CASH uitgaven (wisselgeld, etc):</span>
+                        <span class="calc-value negative" id="calc_out">- € 0,00</span>
+                    </div>
+                    <div class="calc-row">
+                        <span class="calc-label">- Terugbetaling:</span>
+                        <span class="calc-value" id="calc_terugbetaling">€ 0,00</span>
+                    </div>
+                    <div class="calc-row">
+                        <span class="calc-label">VERWACHT EINDSALDO KAS:</span>
+                        <span class="calc-value" id="calc_einde">€ 0,00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Eindsaldo -->
+            <div class="eindsaldo-box">
+                <p>💰 EINDRESULTAAT KASSA</p>
+                <div class="amount" id="rap_eindsaldo">€ 0,00</div>
+                <p style="margin-top: 10px;">Tel dit na en vergelijk met werkelijk bedrag!</p>
+            </div>
+
+            <!-- Buttons -->
+            <div class="rapport-buttons" id="rapport_buttons">
+                <button class="btn btn-primary" style="padding: 15px 40px;" onclick="closePreview()">✕ Preview Sluiten</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data
+        let eventInfo = JSON.parse(localStorage.getItem('kassa_event')) || {};
+        let personen = JSON.parse(localStorage.getItem('kassa_personen')) || [];
+        let prijslijst = JSON.parse(localStorage.getItem('kassa_prijslijst')) || [];
+        let kassabewegingen = JSON.parse(localStorage.getItem('kassa_kassabewegingen')) || [];
+        let startbedrag = JSON.parse(localStorage.getItem('kassa_startbedrag')) || { bedrag: 0, oorsprong: '', persoon_id: '', persoon_naam: '' };
+
+        // Init
+        window.addEventListener('load', function() {
+            loadEventInfo();
+            renderPersonen();
+            renderPrijslijst();
+            updateArtikelSelects();
+            addArtikelRow();
+            renderKassabewegingen();
+            updateVrijwilligerDropdown();
+            loadStartbedrag();
+            updateKasstand();
+            updateScenarios();
+        });
+
+        // ========== TAB SWITCHING ==========
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tab).classList.add('active');
+            event.target.classList.add('active');
+
+            if (tab === 'kassabewegingen') {
+                updateArtikelSelects();
+                renderKassabewegingen();
+                updateKasstand();
+            }
+        }
+
+        // ========== EVENT INFO ==========
+        function saveEventInfo() {
+            eventInfo = {
+                naam: document.getElementById('ev_naam').value,
+                locatie: document.getElementById('ev_locatie').value,
+                datum: document.getElementById('ev_datum').value
+            };
+            localStorage.setItem('kassa_event', JSON.stringify(eventInfo));
+            showMessage('✅ Event info opgeslagen!', 'success');
+        }
+
+        function loadEventInfo() {
+            document.getElementById('ev_naam').value = eventInfo.naam || '';
+            document.getElementById('ev_locatie').value = eventInfo.locatie || '';
+            document.getElementById('ev_datum').value = eventInfo.datum || '';
+        }
+
+        // ========== PERSONEN ==========
+        function addPersoon() {
+            const naam = document.getElementById('per_naam').value.trim();
+            const voornaam = document.getElementById('per_voornaam').value.trim();
+            const email = document.getElementById('per_email').value.trim();
+            const tel = document.getElementById('per_tel').value.trim();
+            const iban = document.getElementById('per_iban').value.trim();
+
+            if (!naam || !voornaam) {
+                showMessage('Voer naam en voornaam in!', 'error');
+                return;
+            }
+
+            if (!iban) {
+                showMessage('Rekeningnummer is VERPLICHT!', 'error');
+                return;
+            }
+
+            if (!isValidBelgianIBAN(iban)) {
+                showMessage('❌ Ongeldig rekeningnummer!\nAccepteerd: BE12345678901 of 310115540830', 'error');
+                return;
+            }
+
+            // Confirm dialog - BELANGRIJK!
+            const confirmMsg = `⚠️ BELANGRIJK!\n\nNaam: ${voornaam} ${naam}\nRekeningnummer: ${iban}\n\nDit rekeningnummer wordt gebruikt voor terugbetalingen!\nZorg dat dit EXACT correct is!\n\nBevestigen?`;
+            
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+
+            personen.push({
+                id: Date.now().toString(),
+                naam: naam,
+                voornaam: voornaam,
+                email: email,
+                tel: tel,
+                iban: iban
+            });
+
+            localStorage.setItem('kassa_personen', JSON.stringify(personen));
+            document.getElementById('per_naam').value = '';
+            document.getElementById('per_voornaam').value = '';
+            document.getElementById('per_email').value = '';
+            document.getElementById('per_tel').value = '';
+            document.getElementById('per_iban').value = '';
+            renderPersonen();
+            updateVrijwilligerDropdown();
+            showMessage('✅ Persoon toegevoegd!', 'success');
+        }
+
+        function removePersoon(id) {
+            personen = personen.filter(p => p.id !== id);
+            localStorage.setItem('kassa_personen', JSON.stringify(personen));
+            renderPersonen();
+            updateVrijwilligerDropdown();
+        }
+
+        function renderPersonen() {
+            const tbody = document.querySelector('#personen_table tbody');
+            tbody.innerHTML = personen.map(p => `
+                <tr>
+                    <td>${p.naam}</td>
+                    <td>${p.voornaam}</td>
+                    <td>${p.email}</td>
+                    <td>${p.tel}</td>
+                    <td style="font-size: 0.8em;">${p.iban}</td>
+                    <td><button class="btn btn-danger btn-sm" onclick="removePersoon('${p.id}')">🗑️</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function updateVrijwilligerDropdown() {
+            const select = document.getElementById('kb_vrijwilliger');
+            select.innerHTML = '<option value="">-- Selecteer vrijwilliger --</option>' +
+                personen.map(p => `<option value="${p.id}">${p.voornaam} ${p.naam}</option>`).join('');
+            
+            if (startbedrag.persoon_id) {
+                select.value = startbedrag.persoon_id;
+            }
+        }
+
+        function isValidBelgianIBAN(iban) {
+            const clean = iban.replace(/\s/g, '').toUpperCase();
+            // IBAN: BE + 12 cijfers
+            if (/^BE\d{12}$/.test(clean)) return true;
+            // OUD format: 12 cijfers
+            if (/^\d{12}$/.test(clean)) return true;
+            return false;
+        }
+
+        function validateIBAN() {
+            const iban = document.getElementById('per_iban').value.trim();
+            const errorEl = document.getElementById('iban_error');
+            const input = document.getElementById('per_iban');
+
+            if (iban && !isValidBelgianIBAN(iban)) {
+                input.style.borderColor = '#d9534f';
+                input.style.background = '#fff5f5';
+                errorEl.textContent = '❌ Ongeldig! Accepteerd: BE12345678901 of 310115540830';
+                errorEl.style.display = 'block';
+            } else {
+                input.style.borderColor = '#ddd';
+                input.style.background = 'white';
+                errorEl.style.display = 'none';
+            }
+        }
+
+        // ========== PRIJSLIJST ==========
+        function addPrijslijstArtikel() {
+            const naam = document.getElementById('pl_naam').value.trim();
+            const prijs = parseFloat(document.getElementById('pl_prijs').value) || 0;
+
+            if (!naam) {
+                showMessage('Voer artikel naam in!', 'error');
+                return;
+            }
+
+            prijslijst.push({
+                id: Date.now().toString(),
+                naam: naam,
+                prijs: prijs,
+                actief: true
+            });
+
+            localStorage.setItem('kassa_prijslijst', JSON.stringify(prijslijst));
+            document.getElementById('pl_naam').value = '';
+            document.getElementById('pl_prijs').value = '';
+            renderPrijslijst();
+            updateArtikelSelects();
+            showMessage('✅ Artikel toegevoegd!', 'success');
+        }
+
+        function removePrijslijstArtikel(id) {
+            prijslijst = prijslijst.filter(a => a.id !== id);
+            localStorage.setItem('kassa_prijslijst', JSON.stringify(prijslijst));
+            renderPrijslijst();
+            updateArtikelSelects();
+        }
+
+        function renderPrijslijst() {
+            const tbody = document.querySelector('#prijslijst_table tbody');
+            tbody.innerHTML = prijslijst.map(a => {
+                const actief = a.actief !== false;
+                return `
+                    <tr>
+                        <td>${a.naam}</td>
+                        <td>€${a.prijs.toFixed(2)}</td>
+                        <td>
+                            <button class="btn ${actief ? 'btn-success' : 'btn-info'} btn-sm" onclick="toggleArtikelActief('${a.id}')">${actief ? '🟢 Actief' : '⚪ Inactief'}</button>
+                        </td>
+                        <td>
+                            <button class="btn btn-primary btn-sm" onclick="editPrijslijstArtikel('${a.id}')">✏️</button>
+                            <button class="btn btn-danger btn-sm" onclick="removePrijslijstArtikel('${a.id}')">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function toggleArtikelActief(id) {
+            const artikel = prijslijst.find(a => a.id === id);
+            if (!artikel) return;
+
+            artikel.actief = artikel.actief === false;
+            localStorage.setItem('kassa_prijslijst', JSON.stringify(prijslijst));
+            renderPrijslijst();
+            updateArtikelSelects();
+            showMessage(`Artikel ${artikel.actief ? 'actief' : 'inactief'} gezet!`, 'success');
+        }
+
+        function editPrijslijstArtikel(id) {
+            const artikel = prijslijst.find(a => a.id === id);
+            if (!artikel) return;
+
+            const newNaam = prompt('Artikel naam:', artikel.naam);
+            if (newNaam === null) return;
+
+            const newPrijsStr = prompt('Artikel prijs (€):', artikel.prijs.toFixed(2));
+            if (newPrijsStr === null) return;
+
+            const newPrijs = parseFloat(newPrijsStr);
+            if (isNaN(newPrijs)) {
+                showMessage('❌ Ongeldige prijs!', 'error');
+                return;
+            }
+
+            artikel.naam = newNaam.trim();
+            artikel.prijs = newPrijs;
+
+            localStorage.setItem('kassa_prijslijst', JSON.stringify(prijslijst));
+            renderPrijslijst();
+            updateArtikelSelects();
+            showMessage('✅ Artikel gewijzigd!', 'success');
+        }
+
+        // ========== STARTBEDRAG ==========
+        function updateStartbedragForm() {
+            const oorsprong = document.getElementById('kb_oorsprong').value;
+            const vrijwilligerDiv = document.getElementById('vrijwilliger_select_div');
+
+            if (oorsprong === 'vrijwilliger') {
+                vrijwilligerDiv.style.display = 'block';
+            } else {
+                vrijwilligerDiv.style.display = 'none';
+            }
+            updateKasstand();
+        }
+
+        function saveStartbedrag() {
+            const bedrag = parseFloat(document.getElementById('kb_startbedrag').value) || 0;
+            const oorsprong = document.getElementById('kb_oorsprong').value;
+            
+            if (!oorsprong) {
+                showMessage('Selecteer afkomstig van!', 'error');
+                return;
+            }
+
+            let persoon_id = '';
+            let persoon_naam = '';
+
+            if (oorsprong === 'vrijwilliger') {
+                persoon_id = document.getElementById('kb_vrijwilliger').value;
+                const persoon = personen.find(p => p.id === persoon_id);
+                if (!persoon) {
+                    showMessage('Selecteer een vrijwilliger!', 'error');
+                    return;
+                }
+                persoon_naam = `${persoon.voornaam} ${persoon.naam}`;
+            }
+
+            startbedrag = { 
+                bedrag: bedrag, 
+                oorsprong: oorsprong, 
+                persoon_id: persoon_id,
+                persoon_naam: persoon_naam
+            };
+            
+            localStorage.setItem('kassa_startbedrag', JSON.stringify(startbedrag));
+            updateKasstand();
+            showMessage('✅ Startbedrag opgeslagen!', 'success');
+        }
+
+        function loadStartbedrag() {
+            document.getElementById('kb_startbedrag').value = startbedrag.bedrag || '';
+            document.getElementById('kb_oorsprong').value = startbedrag.oorsprong || '';
+            
+            const vrijwilligerDiv = document.getElementById('vrijwilliger_select_div');
+            if (startbedrag.oorsprong === 'vrijwilliger') {
+                vrijwilligerDiv.style.display = 'block';
+                document.getElementById('kb_vrijwilliger').value = startbedrag.persoon_id || '';
+                showVrijwilligerInfo();
+            } else {
+                vrijwilligerDiv.style.display = 'none';
+            }
+        }
+
+        function showVrijwilligerInfo() {
+            const persoon_id = document.getElementById('kb_vrijwilliger').value;
+            const persoon = personen.find(p => p.id === persoon_id);
+            const infoBox = document.getElementById('vrijwilliger_info_box');
+
+            if (persoon) {
+                infoBox.innerHTML = `
+                    <strong>💳 TERUGBETALING NAAR:</strong><br>
+                    <div style="margin-top: 8px; padding: 10px; background: white; border-radius: 4px;">
+                        <strong>${persoon.voornaam} ${persoon.naam}</strong><br>
+                        📧 ${persoon.email}<br>
+                        📱 ${persoon.tel}<br>
+                        <br>
+                        <strong style="color: #c8442a; font-size: 1.1em;">🏦 ${persoon.iban}</strong>
+                    </div>
+                `;
+                infoBox.style.display = 'block';
+            } else {
+                infoBox.style.display = 'none';
+            }
+        }
+
+        // ========== KASSABEWEGINGEN ==========
+        function updateScenarios() {
+            const betaling = document.getElementById('kb_betaling').value;
+            const scenario = document.getElementById('kb_scenario');
+            const artikelen = document.getElementById('artikelen_list');
+            const add_btn = document.getElementById('add_artikel_btn');
+            const optional = document.getElementById('artikelen_optional');
+
+            scenario.innerHTML = '';
+
+            if (betaling === 'gift') {
+                // GIFT ZONDER AANKOOP
+                scenario.innerHTML = '<option value="gift">🎁 Gift zonder aankoop</option>';
+                artikelen.innerHTML = '';
+                add_btn.style.display = 'none';
+                optional.textContent = '(niet nodig voor gift)';
+            } else if (betaling === 'kaart') {
+                // KAART: Exact, Gift, Wisselgeld
+                scenario.innerHTML = `
+                    <option value="exact">Exact</option>
+                    <option value="gift">Gift</option>
+                    <option value="wisselgeld">Wisselgeld (uit kas!)</option>
+                `;
+                add_btn.style.display = 'inline-block';
+                optional.textContent = '(optioneel)';
+                if (artikelen.innerHTML === '') addArtikelRow();
+            } else {
+                // CASH: Exact, Gift, Wisselgeld
+                scenario.innerHTML = `
+                    <option value="exact">Exact</option>
+                    <option value="gift">Gift</option>
+                    <option value="wisselgeld">Wisselgeld</option>
+                `;
+                add_btn.style.display = 'inline-block';
+                optional.textContent = '(optioneel)';
+                if (artikelen.innerHTML === '') addArtikelRow();
+            }
+
+            updateSubtotaal();
+        }
+
+        function setCurrentTime() {
+            if (!document.getElementById('kb_uur').value) {
+                const now = new Date();
+                const h = String(now.getHours()).padStart(2, '0');
+                const m = String(now.getMinutes()).padStart(2, '0');
+                document.getElementById('kb_uur').value = `${h}:${m}`;
+            }
+        }
+
+        function updateArtikelSelects() {
+            const selects = document.querySelectorAll('.artikel-item select');
+            selects.forEach(select => {
+                const value = select.value;
+                select.innerHTML = '<option value="">--</option>' +
+                    prijslijst.filter(a => a.actief !== false).map(a => `<option value="${a.id}" data-prijs="${a.prijs}">${a.naam}</option>`).join('');
+                select.value = value;
+            });
+        }
+
+        function addArtikelRow() {
+            const list = document.getElementById('artikelen_list');
+            const row = document.createElement('div');
+            row.className = 'artikel-item';
+            row.innerHTML = `
+                <select onchange="updateSubtotaal()">
+                    <option value="">--</option>
+                    ${prijslijst.filter(a => a.actief !== false).map(a => `<option value="${a.id}" data-prijs="${a.prijs}">${a.naam}</option>`).join('')}
+                </select>
+                <input type="number" value="1" min="1" onchange="updateSubtotaal()">
+                <input type="number" disabled value="0.00">
+                <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove(); updateSubtotaal();">🗑️</button>
+            `;
+            list.appendChild(row);
+        }
+
+        function updateSubtotaal() {
+            let total = 0;
+            document.querySelectorAll('.artikel-item').forEach(row => {
+                const select = row.querySelector('select');
+                const aantal = parseFloat(row.querySelector('input[type="number"]').value) || 0;
+                const artikel = prijslijst.find(a => a.id === select.value);
+                const prijs = artikel ? artikel.prijs : 0;
+                const sub = aantal * prijs;
+                row.querySelectorAll('input')[1].value = sub.toFixed(2);
+                total += sub;
+            });
+
+            document.getElementById('kb_subtotaal').value = total.toFixed(2);
+            generateOpmerking();
+        }
+
+        function generateOpmerking() {
+            const betaling = document.getElementById('kb_betaling').value;
+            const uur = document.getElementById('kb_uur').value || '--:--';
+            const subtotaal = parseFloat(document.getElementById('kb_subtotaal').value) || 0;
+            const klant = parseFloat(document.getElementById('kb_klant').value) || 0;
+            const scenario = document.getElementById('kb_scenario').value;
+
+            let artikelen = [];
+            document.querySelectorAll('.artikel-item').forEach(row => {
+                const select = row.querySelector('select');
+                const aantal = parseFloat(row.querySelector('input[type="number"]').value) || 0;
+                const artikel = prijslijst.find(a => a.id === select.value);
+                if (artikel && aantal > 0) {
+                    artikelen.push(`${aantal}x ${artikel.naam} (€${artikel.prijs.toFixed(2)} = €${(aantal * artikel.prijs).toFixed(2)})`);
+                }
+            });
+
+            let opmerking = '';
+
+            if (betaling === 'gift') {
+                opmerking = `Gift om ${uur}:\nBedrag: €${klant.toFixed(2)}\n✅ Gift (geen aankoop)`;
+            } else {
+                if (artikelen.length === 0) {
+                    opmerking = `${uur}: Geen artikelen\n`;
+                } else {
+                    opmerking = `Klant kocht om ${uur}:\n${artikelen.join('\n')}\n\nTotaal artikel: €${subtotaal.toFixed(2)}\n`;
+                }
+
+                opmerking += `Betaalde: €${klant.toFixed(2)} via ${betaling === 'cash' ? 'CASH' : 'KAART'}\n`;
+
+                const verschil = klant - subtotaal;
+                if (Math.abs(verschil) < 0.01) {
+                    opmerking += `✅ Exact betaald`;
+                } else if (verschil > 0) {
+                    if (scenario === 'gift') {
+                        opmerking += `🎁 Verschil €${verschil.toFixed(2)} gegeven als GIFT`;
+                    } else {
+                        opmerking += `💱 Wisselgeld €${verschil.toFixed(2)} (${betaling === 'kaart' ? 'UIT KAS gegeven!' : 'gegeven'})`;
+                    }
+                }
+            }
+
+            document.getElementById('kb_opmerking').value = opmerking;
+        }
+
+        function addKasTransactie() {
+            const uur = document.getElementById('kb_uur').value;
+            const betaling = document.getElementById('kb_betaling').value;
+            const scenario = document.getElementById('kb_scenario').value;
+
+            if (!uur || !scenario) {
+                showMessage('⚠️ Voer uur en scenario in!', 'error');
+                return;
+            }
+
+            if (betaling === 'gift' && scenario === 'gift') {
+                // GIFT ZONDER AANKOOP - ALLEEN bedrag nodig
+                const klant = parseFloat(document.getElementById('kb_klant').value) || 0;
+                if (klant === 0) {
+                    showMessage('⚠️ Voer bedrag in!', 'error');
+                    return;
+                }
+
+                kassabewegingen.push({
+                    id: Date.now().toString(),
+                    uur: uur,
+                    type: 'gift',
+                    artikelen: [],
+                    subtotaal: 0,
+                    klant_gegeven: klant,
+                    betalingwijze: betaling,
+                    scenario: scenario,
+                    opmerking: document.getElementById('kb_opmerking').value
+                });
+            } else {
+                // NORMALE TRANSACTIE - ARTIKELEN NODIG
+                const artikelen = [];
+                document.querySelectorAll('.artikel-item').forEach(row => {
+                    const select = row.querySelector('select');
+                    const aantal = parseFloat(row.querySelector('input[type="number"]').value) || 0;
+                    const artikel = prijslijst.find(a => a.id === select.value);
+                    if (artikel && aantal > 0) {
+                        artikelen.push({
+                            id: artikel.id,
+                            naam: artikel.naam,
+                            prijs_gebruikt: artikel.prijs,
+                            aantal: aantal,
+                            subtotaal: aantal * artikel.prijs
+                        });
+                    }
+                });
+
+                const subtotaal = parseFloat(document.getElementById('kb_subtotaal').value) || 0;
+
+                if (betaling !== 'gift' && subtotaal === 0 && artikelen.length === 0) {
+                    showMessage('⚠️ Voeg artikelen toe OF selecteer gift zonder aankoop!', 'error');
+                    return;
+                }
+
+                kassabewegingen.push({
+                    id: Date.now().toString(),
+                    uur: uur,
+                    type: 'normale',
+                    artikelen: artikelen,
+                    subtotaal: subtotaal,
+                    klant_gegeven: parseFloat(document.getElementById('kb_klant').value) || 0,
+                    betalingwijze: betaling,
+                    scenario: scenario,
+                    opmerking: document.getElementById('kb_opmerking').value
+                });
+            }
+
+            localStorage.setItem('kassa_kassabewegingen', JSON.stringify(kassabewegingen));
+
+            // Reset
+            document.getElementById('kb_uur').value = '';
+            document.getElementById('kb_klant').value = '';
+            document.getElementById('kb_betaling').value = 'cash';
+            document.getElementById('artikelen_list').innerHTML = '';
+            updateScenarios();
+            renderKassabewegingen();
+            updateKasstand();
+            showMessage('✅ Transactie opgeslagen!', 'success');
+        }
+
+        function removeKasTransactie(id) {
+            kassabewegingen = kassabewegingen.filter(t => t.id !== id);
+            localStorage.setItem('kassa_kassabewegingen', JSON.stringify(kassabewegingen));
+            renderKassabewegingen();
+            updateKasstand();
+        }
+
+        function editKasTransactie(id) {
+            const t = kassabewegingen.find(x => x.id === id);
+            if (!t) return;
+
+            // Load in form
+            document.getElementById('kb_uur').value = t.uur;
+            document.getElementById('kb_klant').value = t.klant_gegeven;
+            document.getElementById('kb_betaling').value = t.betalingwijze;
+            updateScenarios();
+            document.getElementById('kb_scenario').value = t.scenario;
+
+            // Load artikelen
+            if (t.type === 'gift') {
+                document.getElementById('kb_betaling').value = 'gift';
+                updateScenarios();
+            } else {
+                const list = document.getElementById('artikelen_list');
+                list.innerHTML = '';
+                t.artikelen.forEach(a => {
+                    const artikel = prijslijst.find(p => p.id === a.id);
+                    if (artikel) {
+                        const row = document.createElement('div');
+                        row.className = 'artikel-item';
+                        row.innerHTML = `
+                            <select onchange="updateSubtotaal()" value="${a.id}">
+                                <option value="">--</option>
+                                ${prijslijst.map(p => `<option value="${p.id}" ${p.id === a.id ? 'selected' : ''}>${p.naam}</option>`).join('')}
+                            </select>
+                            <input type="number" value="${a.aantal}" min="1" onchange="updateSubtotaal()">
+                            <input type="number" disabled value="${(a.aantal * prijslijst.find(x => x.id === a.id).prijs).toFixed(2)}">
+                            <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove(); updateSubtotaal();">🗑️</button>
+                        `;
+                        list.appendChild(row);
+                    }
+                });
+            }
+
+            // Remove from list
+            kassabewegingen = kassabewegingen.filter(x => x.id !== id);
+            localStorage.setItem('kassa_kassabewegingen', JSON.stringify(kassabewegingen));
+            
+            updateSubtotaal();
+            renderKassabewegingen();
+            updateKasstand();
+            showMessage('✏️ Transactie in WIJZIG mode - pas aan en klik EINDE TRANSACTIE', 'warning');
+            switchTab('kassabewegingen');
+        }
+
+        function renderKassabewegingen() {
+            const list = document.getElementById('kassabewegingen_list');
+            if (kassabewegingen.length === 0) {
+                list.innerHTML = '<p style="color: #999;">Geen transacties</p>';
+                return;
+            }
+
+            list.innerHTML = kassabewegingen.map(t => {
+                let impact = 0;
+                let title = '';
+
+                if (t.type === 'gift') {
+                    impact = t.klant_gegeven;
+                    title = `🎁 Gift ${t.klant_gegeven.toFixed(2)}`;
+                } else {
+                    const verschil = t.klant_gegeven - t.subtotaal;
+                    if (t.betalingwijze === 'kaart') {
+                        if (t.scenario === 'wisselgeld') {
+                            impact = -verschil;
+                        } else {
+                            impact = 0;
+                        }
+                    } else { // CASH
+                        if (t.scenario === 'wisselgeld') {
+                            impact = t.subtotaal;
+                        } else {
+                            impact = t.klant_gegeven;
+                        }
+                    }
+                    title = `${t.artikelen.map(a => a.naam).join(', ')}`;
+                }
+
+                return `
+                    <div class="transactie-card" onclick="this.querySelector('.transactie-content').classList.toggle('show')">
+                        <div class="transactie-header">
+                            <div>
+                                <div style="font-weight: 600;">⏰ ${t.uur}</div>
+                                <div style="font-size: 0.85em; color: #666;">${title}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-weight: 600; color: ${impact >= 0 ? '#4a6b3a' : '#d9534f'};">${impact >= 0 ? '+' : ''}€${Math.abs(impact).toFixed(2)}</div>
+                            </div>
+                        </div>
+                        <div class="transactie-content">
+                            ${t.type === 'gift' ? `
+                                <div style="padding: 10px; background: #fffbf0; border-radius: 4px; margin-bottom: 10px; font-size: 0.85em;">
+                                    🎁 <strong>Gift zonder aankoop</strong><br>
+                                    Bedrag: €${t.klant_gegeven.toFixed(2)}
+                                </div>
+                            ` : `
+                                <table style="margin: 10px 0; width: 100%; font-size: 0.85em;">
+                                    <tr style="background: #f5f5f5;">
+                                        <th style="padding: 8px;">Artikel</th>
+                                        <th style="padding: 8px;">Aant.</th>
+                                        <th style="padding: 8px;">Prijs</th>
+                                        <th style="padding: 8px;">Subtot.</th>
+                                    </tr>
+                                    ${t.artikelen.map(a => `
+                                        <tr>
+                                            <td style="padding: 8px;">${a.naam}</td>
+                                            <td style="padding: 8px;">x${a.aantal}</td>
+                                            <td style="padding: 8px;">€${a.prijs_gebruikt.toFixed(2)}</td>
+                                            <td style="padding: 8px; font-weight: 600;">€${a.subtotaal.toFixed(2)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </table>
+                            `}
+                            <div style="padding: 10px; background: #fffbf0; border-radius: 4px; margin-bottom: 10px; font-size: 0.85em; white-space: pre-wrap;">
+                                ${t.opmerking}
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn btn-primary btn-sm" onclick="editKasTransactie('${t.id}'); event.stopPropagation();">✏️ Wijzigen</button>
+                                <button class="btn btn-danger btn-sm" onclick="removeKasTransactie('${t.id}'); event.stopPropagation();">🗑️ Verwijderen</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateKasstand() {
+            let cashIn = 0, cashOut = 0;
+
+            kassabewegingen.forEach(t => {
+                if (t.type === 'gift') {
+                    // Gift zonder aankoop
+                    cashIn += t.klant_gegeven;
+                } else {
+                    const verschil = t.klant_gegeven - t.subtotaal;
+                    
+                    if (t.betalingwijze === 'kaart') {
+                        // Kaart
+                        if (t.scenario === 'wisselgeld') {
+                            cashOut += verschil;
+                        }
+                        // Else: nothing impact on kas
+                    } else {
+                        // CASH
+                        if (t.scenario === 'wisselgeld') {
+                            cashIn += t.subtotaal;
+                            cashOut += verschil;
+                        } else {
+                            // Exact of gift
+                            cashIn += t.klant_gegeven;
+                        }
+                    }
+                }
+            });
+
+            const bedrag = parseFloat(document.getElementById('kb_startbedrag').value) || 0;
+            let terugbetaling = 0;
+            
+            if (document.getElementById('kb_oorsprong').value === 'vrijwilliger' && bedrag > 0) {
+                terugbetaling = bedrag;
+            }
+
+            const eindsaldo = bedrag + cashIn - cashOut - terugbetaling;
+
+            document.getElementById('ks_startbedrag').textContent = `€ ${bedrag.toFixed(2)}`;
+            document.getElementById('ks_inkomsten').textContent = `+ € ${cashIn.toFixed(2)}`;
+            document.getElementById('ks_uitgaven').textContent = `- € ${cashOut.toFixed(2)}`;
+            
+            if (terugbetaling > 0) {
+                document.getElementById('ks_terugbetaling').textContent = `- € ${terugbetaling.toFixed(2)} (${startbedrag.persoon_naam})`;
+            } else {
+                document.getElementById('ks_terugbetaling').textContent = `- € 0,00`;
+            }
+            
+            document.getElementById('ks_eindsaldo').textContent = `€ ${eindsaldo.toFixed(2)}`;
+
+            // Update popup
+            document.getElementById('popup_kasstand').textContent = `€ ${eindsaldo.toFixed(2)}`;
+
+            if (document.getElementById('kb_oorsprong').value === 'vrijwilliger') {
+                showVrijwilligerInfo();
+            }
+        }
+
+        // ========== KASSA POPUP ==========
+        function showKassaPopup() {
+            document.getElementById('kassaPopup').classList.add('show');
+        }
+
+        function closeKassaPopup() {
+            document.getElementById('kassaPopup').classList.remove('show');
+        }
+
+        // ========== PREVIEW MODAL ==========
+        function showPreview(mode = 'view') {
+            if (kassabewegingen.length === 0) {
+                showMessage('⚠️ Geen transacties om te tonen!', 'warning');
+                return;
+            }
+
+            // Fill rapport
+            document.getElementById('rap_naam').textContent = eventInfo.naam || '-';
+            document.getElementById('rap_locatie').textContent = eventInfo.locatie || '-';
+            document.getElementById('rap_datum').textContent = eventInfo.datum || '-';
+            document.getElementById('rap_tijd').textContent = new Date().toLocaleTimeString('nl-NL').slice(0, 5);
+
+            const bedrag = parseFloat(document.getElementById('kb_startbedrag').value) || 0;
+            document.getElementById('rap_startbedrag').textContent = `€ ${bedrag.toFixed(2)}`;
+            
+            const oorsprong = document.getElementById('kb_oorsprong').value;
+            const oorsprongText = oorsprong === 'vrijwilliger' ? `👤 Vrijwilliger (${startbedrag.persoon_naam})` : '🏢 Partij/Organisatie';
+            document.getElementById('rap_oorsprong').textContent = oorsprongText;
+
+            // Transacties Tabel
+            const tbody = document.querySelector('#rap_transacties_tabel tbody');
+            let cashIn = 0, cashOut = 0;
+            
+            tbody.innerHTML = kassabewegingen.map(t => {
+                let impact = 0;
+                let details = '';
+                let artikelen_col = '';
+
+                if (t.type === 'gift') {
+                    artikelen_col = '🎁 Gift (geen aankoop)';
+                    impact = t.klant_gegeven;
+                    details = `<strong>Bedrag:</strong> €${t.klant_gegeven.toFixed(2)}`;
+                    cashIn += t.klant_gegeven;
+                } else {
+                    artikelen_col = t.artikelen.map(a => `${a.aantal}x ${a.naam}`).join('<br>');
+                    const verschil = t.klant_gegeven - t.subtotaal;
+                    
+                    if (t.betalingwijze === 'kaart') {
+                        if (t.scenario === 'wisselgeld') {
+                            impact = -verschil;
+                            cashOut += verschil;
+                            details = `<strong>Artikel:</strong> €${t.subtotaal.toFixed(2)}<br><strong>Kaart:</strong> €${t.klant_gegeven.toFixed(2)}<br><strong>Wisselgeld uit kas:</strong> €${verschil.toFixed(2)}`;
+                        } else {
+                            impact = 0;
+                            details = `<strong>Artikel:</strong> €${t.subtotaal.toFixed(2)}<br><strong>Betaald via Kaart</strong>`;
+                        }
+                    } else {
+                        if (t.scenario === 'wisselgeld') {
+                            impact = t.subtotaal;
+                            cashIn += t.subtotaal;
+                            cashOut += verschil;
+                            details = `<strong>Artikel:</strong> €${t.subtotaal.toFixed(2)}<br><strong>CASH:</strong> €${t.klant_gegeven.toFixed(2)}<br><strong>Wisselgeld:</strong> €${verschil.toFixed(2)}`;
+                        } else {
+                            impact = t.klant_gegeven;
+                            cashIn += t.klant_gegeven;
+                            if (t.scenario === 'gift') {
+                                details = `<strong>Artikel:</strong> €${t.subtotaal.toFixed(2)}<br><strong>CASH:</strong> €${t.klant_gegeven.toFixed(2)}<br><strong>Gift:</strong> €${verschil.toFixed(2)}`;
+                            } else {
+                                details = `<strong>Artikel:</strong> €${t.subtotaal.toFixed(2)}<br><strong>CASH Exact:</strong> €${t.klant_gegeven.toFixed(2)}`;
+                            }
+                        }
+                    }
+                }
+
+                return `
+                    <tr>
+                        <td><strong>${t.uur}</strong></td>
+                        <td>${artikelen_col}</td>
+                        <td>${t.betalingwijze === 'kaart' ? '💳 KAART' : '💵 CASH'}</td>
+                        <td>
+                            <div class="transactie-details">${details}</div>
+                        </td>
+                        <td style="text-align: right; color: ${impact >= 0 ? '#4a6b3a' : '#d9534f'};"><strong>${impact >= 0 ? '+' : ''}€${Math.abs(impact).toFixed(2)}</strong></td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Kasstand Berekening
+            let terugbetaling = 0;
+            let terugbetaling_text = '€ 0,00';
+            
+            if (document.getElementById('kb_oorsprong').value === 'vrijwilliger' && bedrag > 0) {
+                terugbetaling = bedrag;
+                const persoon = personen.find(p => p.id === startbedrag.persoon_id);
+                if (persoon) {
+                    terugbetaling_text = `€ ${terugbetaling.toFixed(2)}<br><small style="color: #666;">naar ${persoon.voornaam} ${persoon.naam}<br>🏦 ${persoon.iban}</small>`;
+                } else {
+                    terugbetaling_text = `€ ${terugbetaling.toFixed(2)}`;
+                }
+            }
+            
+            const eindsaldo = bedrag + cashIn - cashOut - terugbetaling;
+
+            document.getElementById('calc_start').textContent = `€ ${bedrag.toFixed(2)}`;
+            document.getElementById('calc_in').textContent = `+ € ${cashIn.toFixed(2)}`;
+            document.getElementById('calc_out').textContent = `- € ${cashOut.toFixed(2)}`;
+            document.getElementById('calc_terugbetaling').innerHTML = terugbetaling_text;
+            document.getElementById('calc_einde').textContent = `€ ${eindsaldo.toFixed(2)}`;
+
+            document.getElementById('rap_eindsaldo').textContent = `€ ${eindsaldo.toFixed(2)}`;
+
+            // Show modal
+            document.getElementById('previewModal').classList.add('show');
+        }
+
+        function closePreview() {
+            document.getElementById('previewModal').classList.remove('show');
+        }
+
+        // ========== EXPORT & RESET ==========
+        function downloadJSON() {
+            const data = {
+                exported: new Date().toISOString(),
+                event: eventInfo,
+                prijslijst: prijslijst,
+                kassabewegingen: kassabewegingen,
+                startbedrag: startbedrag
+            };
+
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `kassa_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+        }
+
+        function showLeegmakenDialog() {
+            if (confirm('⚠️ Dit wist ALLES!\n\n✅ Personen BLIJVEN behouden\n❌ Event\n❌ Prijslijst\n❌ Kassabewegingen\n\nZeker?')) {
+                eventInfo = {};
+                prijslijst = [];
+                kassabewegingen = [];
+                startbedrag = { bedrag: 0, oorsprong: '', persoon_id: '', persoon_naam: '' };
+
+                localStorage.removeItem('kassa_event');
+                localStorage.removeItem('kassa_prijslijst');
+                localStorage.removeItem('kassa_kassabewegingen');
+                localStorage.removeItem('kassa_startbedrag');
+
+                loadEventInfo();
+                renderPrijslijst();
+                document.getElementById('artikelen_list').innerHTML = '';
+                updateScenarios();
+                renderKassabewegingen();
+                loadStartbedrag();
+                updateKasstand();
+                showMessage('🗑️ Reset klaar - Personen behouden!', 'success');
+            }
+        }
+
+        // ========== UTILS ==========
+        function showMessage(text, type) {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = `message show ${type}`;
+            setTimeout(() => msg.classList.remove('show'), 3000);
+        }
+
+        // Register Service Worker (PWA)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js')
+                .then(registration => console.log('Service Worker registered:', registration))
+                .catch(error => console.log('Service Worker registration failed:', error));
+        }
+    </script>
+</body>
+</html>
