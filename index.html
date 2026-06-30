@@ -643,7 +643,7 @@
 
                     <!-- Input Form -->
                     <div class="section">
-                        <h2>➕ Nieuwe Transactie</h2>
+                        <h2 id="transactie_form_titel">➕ Nieuwe Transactie</h2>
 
                         <div class="form-row">
                             <div>
@@ -689,7 +689,8 @@
                             <textarea id="kb_opmerking" rows="3" readonly style="background: #f5f5f5;"></textarea>
                         </div>
 
-                        <button class="btn btn-success" style="width: 100%; padding: 15px; font-size: 1em;" onclick="addKasTransactie()">✅ EINDE TRANSACTIE</button>
+                        <button id="transactie_opslaan_btn" class="btn btn-success" style="width: 100%; padding: 15px; font-size: 1em;" onclick="addKasTransactie()">✅ EINDE TRANSACTIE</button>
+                        <button id="transactie_annuleren_btn" class="btn btn-warning" style="display: none; width: 100%; padding: 15px; font-size: 1em; margin-top: 8px;" onclick="annuleerKasTransactieBewerking()">Annuleren</button>
                     </div>
 
                     <!-- Transacties -->
@@ -856,7 +857,7 @@
     <script>
         // Data
         const AppState = {
-            version: "1.1.0",
+            version: "1.1.1",
             safeToReload: true,
             transactionOpen: false,
             exportBusy: false,
@@ -871,6 +872,7 @@
         let prijslijst = JSON.parse(localStorage.getItem('kassa_prijslijst')) || [];
         let kassabewegingen = JSON.parse(localStorage.getItem('kassa_kassabewegingen')) || [];
         let startbedrag = JSON.parse(localStorage.getItem('kassa_startbedrag')) || { bedrag: 0, oorsprong: '', persoon_id: '', persoon_naam: '' };
+        let bewerkingTransactieId = null;
 
         // Init
         window.addEventListener('load', function() {
@@ -1407,15 +1409,49 @@
             document.getElementById('kb_opmerking').value = opmerking;
         }
 
+        function updateTransactieFormMode() {
+            const inBewerking = bewerkingTransactieId !== null;
+            const titel = document.getElementById('transactie_form_titel');
+            const opslaanBtn = document.getElementById('transactie_opslaan_btn');
+            const annulerenBtn = document.getElementById('transactie_annuleren_btn');
+
+            if (titel) titel.textContent = inBewerking ? '✏️ Transactie wijzigen' : '➕ Nieuwe Transactie';
+            if (opslaanBtn) opslaanBtn.textContent = inBewerking ? '✅ WIJZIGING OPSLAAN' : '✅ EINDE TRANSACTIE';
+            if (annulerenBtn) annulerenBtn.style.display = inBewerking ? 'block' : 'none';
+        }
+
+        function resetKasTransactieForm() {
+            bewerkingTransactieId = null;
+            document.getElementById('kb_uur').value = '';
+            document.getElementById('kb_klant').value = '';
+            document.getElementById('kb_betaling').value = 'cash';
+            document.getElementById('artikelen_list').innerHTML = '';
+            updateTransactieFormMode();
+            updateScenarios();
+        }
+
+        function annuleerKasTransactieBewerking() {
+            if (bewerkingTransactieId === null) return;
+
+            resetKasTransactieForm();
+            renderKassabewegingen();
+            updateKasstand();
+            showMessage('Wijziging geannuleerd - originele transactie behouden!', 'success');
+        }
+
         function addKasTransactie() {
             const uur = document.getElementById('kb_uur').value;
             const betaling = document.getElementById('kb_betaling').value;
             const scenario = document.getElementById('kb_scenario').value;
+            const isBewerking = bewerkingTransactieId !== null;
+            const transactieId = isBewerking ? bewerkingTransactieId : Date.now().toString();
 
             if (!uur || !scenario) {
                 showMessage('⚠️ Voer uur en scenario in!', 'error');
                 return;
             }
+
+            let transactie;
 
             if (betaling === 'gift' && scenario === 'gift') {
                 // GIFT ZONDER AANKOOP - ALLEEN bedrag nodig
@@ -1425,8 +1461,8 @@
                     return;
                 }
 
-                kassabewegingen.push({
-                    id: Date.now().toString(),
+                transactie = {
+                    id: transactieId,
                     uur: uur,
                     type: 'gift',
                     artikelen: [],
@@ -1435,7 +1471,7 @@
                     betalingwijze: betaling,
                     scenario: scenario,
                     opmerking: document.getElementById('kb_opmerking').value
-                });
+                };
             } else {
                 // NORMALE TRANSACTIE - ARTIKELEN NODIG
                 const artikelen = [];
@@ -1453,8 +1489,8 @@
                     return;
                 }
 
-                kassabewegingen.push({
-                    id: Date.now().toString(),
+                transactie = {
+                    id: transactieId,
                     uur: uur,
                     type: 'normale',
                     artikelen: artikelen,
@@ -1463,23 +1499,34 @@
                     betalingwijze: betaling,
                     scenario: scenario,
                     opmerking: document.getElementById('kb_opmerking').value
-                });
+                };
+            }
+
+            if (isBewerking) {
+                const index = kassabewegingen.findIndex(t => t.id === bewerkingTransactieId);
+                if (index === -1) {
+                    showMessage('❌ Originele transactie niet gevonden. Wijziging niet opgeslagen.', 'error');
+                    return;
+                }
+                kassabewegingen[index] = transactie;
+            } else {
+                kassabewegingen.push(transactie);
             }
 
             localStorage.setItem('kassa_kassabewegingen', JSON.stringify(kassabewegingen));
 
-            // Reset
-            document.getElementById('kb_uur').value = '';
-            document.getElementById('kb_klant').value = '';
-            document.getElementById('kb_betaling').value = 'cash';
-            document.getElementById('artikelen_list').innerHTML = '';
-            updateScenarios();
+            resetKasTransactieForm();
             renderKassabewegingen();
             updateKasstand();
-            showMessage('✅ Transactie opgeslagen!', 'success');
+            showMessage(isBewerking ? '✅ Transactie gewijzigd!' : '✅ Transactie opgeslagen!', 'success');
         }
 
         function removeKasTransactie(id) {
+            if (bewerkingTransactieId !== null) {
+                showMessage('⚠️ Rond de actieve wijziging eerst af of annuleer ze.', 'warning');
+                return;
+            }
+
             kassabewegingen = kassabewegingen.filter(t => t.id !== id);
             localStorage.setItem('kassa_kassabewegingen', JSON.stringify(kassabewegingen));
             renderKassabewegingen();
@@ -1487,8 +1534,16 @@
         }
 
         function editKasTransactie(id) {
+            if (bewerkingTransactieId !== null) {
+                showMessage('⚠️ Er is al een transactie in wijziging. Sla die eerst op of annuleer.', 'warning');
+                return;
+            }
+
             const t = kassabewegingen.find(x => x.id === id);
             if (!t) return;
+
+            bewerkingTransactieId = id;
+            updateTransactieFormMode();
 
             // Load in form
             document.getElementById('kb_uur').value = t.uur;
@@ -1522,13 +1577,7 @@
                 });
             }
 
-            // Remove from list
-            kassabewegingen = kassabewegingen.filter(x => x.id !== id);
-            localStorage.setItem('kassa_kassabewegingen', JSON.stringify(kassabewegingen));
-            
             updateSubtotaal();
-            renderKassabewegingen();
-            updateKasstand();
             showMessage('✏️ Transactie in WIJZIG mode - pas aan en klik EINDE TRANSACTIE', 'warning');
             switchTab('kassabewegingen');
         }

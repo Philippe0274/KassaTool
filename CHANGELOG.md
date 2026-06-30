@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1
+- Stap 2B: veilige transactiewijziging met behoud van het bestaande transactie-ID.
+- Bugfix: originele transactie blijft behouden tot een wijziging succesvol wordt opgeslagen.
+
 ## 1.1.0
 - Stap 2A: historische artikelgegevens in kassatransacties worden losgekoppeld van de actuele prijslijst.
 - Versieverhoging: nieuwe functionele release voor historisch correcte transacties.
