@@ -1,72 +1,69 @@
-const CACHE_NAME = 'kassa-tool-v1';
-const urlsToCache = [
-  './',
-  './index.html',
-  './logo.png',
-  './manifest.json'
+const APP_VERSION = "1.0.2";
+const CACHE_NAME = `kassa-tool-${APP_VERSION}`;
+const CACHE_PREFIX = 'kassa-tool-';
+const FALLBACK_DOCUMENTS = [
+    './index_kassa%20tool.html',
+    './'
 ];
 
-// Install event - cache resources
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('Cache opened');
-        return cache.addAll(urlsToCache);
-      })
-      .catch(err => console.log('Cache error:', err))
-  );
-  self.skipWaiting();
+    event.waitUntil((async () => {
+        const cache = await caches.open(CACHE_NAME);
+        await cache.addAll(['./index_kassa%20tool.html']);
+        await self.skipWaiting();
+    })());
 });
 
-// Activate event - clean up old caches
 self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
-  self.clients.claim();
+    event.waitUntil((async () => {
+        const cacheNames = await caches.keys();
+        await Promise.all(
+            cacheNames
+                .filter(cacheName => cacheName.startsWith(CACHE_PREFIX) && cacheName !== CACHE_NAME)
+                .map(cacheName => caches.delete(cacheName))
+        );
+        await self.clients.claim();
+    })());
 });
 
-// Fetch event - serve from cache, fallback to network
+self.addEventListener('message', event => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+});
+
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Return from cache if available
-        if (response) {
-          return response;
+    const request = event.request;
+    const isGetRequest = request.method === 'GET';
+    const isDocumentRequest = request.mode === 'navigate' || request.destination === 'document';
+
+    if (isGetRequest && isDocumentRequest) {
+        event.respondWith(networkFirstDocument(request));
+    }
+});
+
+async function networkFirstDocument(request) {
+    if (request.method !== 'GET') {
+        return fetch(request);
+    }
+
+    const cache = await caches.open(CACHE_NAME);
+
+    try {
+        const networkResponse = await fetch(request);
+        if (networkResponse && networkResponse.ok) {
+            await cache.put(request, networkResponse.clone());
+        }
+        return networkResponse;
+    } catch (error) {
+        const cachedResponse = await cache.match(request);
+        if (cachedResponse) return cachedResponse;
+
+        for (const fallbackUrl of FALLBACK_DOCUMENTS) {
+            const fallbackResponse = await cache.match(fallbackUrl);
+            if (fallbackResponse) return fallbackResponse;
         }
 
-        return fetch(event.request).then(response => {
-          // Check if valid response
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-
-          // Clone the response
-          const responseToCache = response.clone();
-
-          caches.open(CACHE_NAME)
-            .then(cache => {
-              cache.put(event.request, responseToCache);
-            });
-
-          return response;
-        });
-      })
-      .catch(err => {
-        console.log('Fetch error:', err);
-        // Return offline page or cached response
-        return caches.match('./index.html');
-      })
-  );
-});
+        throw error;
+    }
+}
