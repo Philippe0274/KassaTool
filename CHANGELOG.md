@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0
+- Stap 4B: definitief exportcontract voor uitwisseling tussen Kassa Tool en Hoofdapp.
+- Export schemaVersion 1.0.0 met UUID-identifiers, masterData, transaction revisions en integrity-blok.
+- Migratie: bestaande Date.now()-identifiers worden idempotent omgezet naar UUID's.
+- Versieverhoging: nieuwe exportarchitectuur en PWA-update voor het definitieve contract.
+
 ## 1.1.2
 - Stap 3: prijslijst is permanente masterdata van de Kassa Tool.
 - Veiligheid: automatische backup en herstel van de prijslijst via localStorage.

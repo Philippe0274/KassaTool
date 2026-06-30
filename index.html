@@ -857,7 +857,7 @@
     <script>
         // Data
         const AppState = {
-            version: "1.1.2",
+            version: "1.2.0",
             safeToReload: true,
             transactionOpen: false,
             exportBusy: false,
@@ -869,6 +869,11 @@
 
         const PRIJSLIJST_STORAGE_KEY = 'kassa_prijslijst';
         const PRIJSLIJST_BACKUP_KEY = 'kassa_prijslijst_backup';
+        const EXPORT_SCHEMA_NAME = 'be.zomerfeest.kassa-export';
+        const EXPORT_SCHEMA_VERSION = '1.0.0';
+        const DEVICE_ID_STORAGE_KEY = 'kassa_device_id';
+        const DEVICE_FRIENDLY_NAME_STORAGE_KEY = 'kassa_device_friendly_name';
+        const EVENT_ID_STORAGE_KEY = 'kassa_event_id';
 
         let eventInfo = JSON.parse(localStorage.getItem('kassa_event')) || {};
         let personen = JSON.parse(localStorage.getItem('kassa_personen')) || [];
@@ -876,6 +881,12 @@
         let kassabewegingen = JSON.parse(localStorage.getItem('kassa_kassabewegingen')) || [];
         let startbedrag = JSON.parse(localStorage.getItem('kassa_startbedrag')) || { bedrag: 0, oorsprong: '', persoon_id: '', persoon_naam: '' };
         let bewerkingTransactieId = null;
+        let deviceId = getOrCreateStorageUuid(DEVICE_ID_STORAGE_KEY);
+        let deviceFriendlyName = localStorage.getItem(DEVICE_FRIENDLY_NAME_STORAGE_KEY) || '';
+        let eventId = getOrCreateStorageUuid(EVENT_ID_STORAGE_KEY);
+
+        ensureDeviceFriendlyName();
+        migrateExportContractData();
 
         // Init
         window.addEventListener('load', function() {
@@ -953,7 +964,7 @@
             }
 
             personen.push({
-                id: Date.now().toString(),
+                id: createUuid(),
                 naam: naam,
                 voornaam: voornaam,
                 email: email,
@@ -1029,6 +1040,168 @@
             }
         }
 
+        // ========== EXPORT CONTRACT & MIGRATIE ==========
+        function isUuid(value) {
+            return typeof value === 'string' &&
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+        }
+
+        function createUuid() {
+            if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+                return window.crypto.randomUUID();
+            }
+
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(char) {
+                const random = Math.random() * 16 | 0;
+                const value = char === 'x' ? random : (random & 0x3 | 0x8);
+                return value.toString(16);
+            });
+        }
+
+        function getOrCreateStorageUuid(key) {
+            let value = localStorage.getItem(key);
+            if (!isUuid(value)) {
+                value = createUuid();
+                localStorage.setItem(key, value);
+            }
+            return value;
+        }
+
+        function ensureDeviceFriendlyName() {
+            if (localStorage.getItem(DEVICE_FRIENDLY_NAME_STORAGE_KEY) === null) {
+                localStorage.setItem(DEVICE_FRIENDLY_NAME_STORAGE_KEY, deviceFriendlyName);
+            }
+        }
+
+        function toCents(value) {
+            const number = Number(value);
+            return Number.isFinite(number) ? Math.round(number * 100) : 0;
+        }
+
+        function getEventDate() {
+            return eventInfo.datum || new Date().toISOString().split('T')[0];
+        }
+
+        function getIsoDateTime(date, time) {
+            const safeDate = date || new Date().toISOString().split('T')[0];
+            const safeTime = time || '00:00';
+            const parsed = new Date(`${safeDate}T${safeTime}:00`);
+            return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+        }
+
+        function migrateExportContractData() {
+            const personIdMap = {};
+            const articleIdMap = {};
+            let personenChanged = false;
+            let prijslijstChanged = false;
+            let kassabewegingenChanged = false;
+            let startbedragChanged = false;
+
+            personen.forEach(persoon => {
+                if (!persoon || typeof persoon !== 'object') return;
+                if (!isUuid(persoon.id)) {
+                    const oldId = persoon.id;
+                    persoon.id = createUuid();
+                    if (oldId) personIdMap[oldId] = persoon.id;
+                    personenChanged = true;
+                }
+            });
+
+            prijslijst.forEach(artikel => {
+                if (!artikel || typeof artikel !== 'object') return;
+                if (!isUuid(artikel.id)) {
+                    const oldId = artikel.id;
+                    artikel.id = createUuid();
+                    if (oldId) articleIdMap[oldId] = artikel.id;
+                    prijslijstChanged = true;
+                }
+            });
+
+            if (startbedrag.persoon_id && personIdMap[startbedrag.persoon_id]) {
+                startbedrag.persoon_id = personIdMap[startbedrag.persoon_id];
+                startbedragChanged = true;
+            }
+
+            kassabewegingen.forEach(transactie => {
+                if (!transactie || typeof transactie !== 'object') return;
+
+                if (!isUuid(transactie.id)) {
+                    transactie.id = createUuid();
+                    kassabewegingenChanged = true;
+                }
+
+                if (transactie.eventId !== eventId) {
+                    transactie.eventId = eventId;
+                    kassabewegingenChanged = true;
+                }
+
+                if (transactie.deviceId !== deviceId) {
+                    transactie.deviceId = deviceId;
+                    kassabewegingenChanged = true;
+                }
+
+                if (!Number.isInteger(transactie.revision) || transactie.revision < 1) {
+                    transactie.revision = 1;
+                    kassabewegingenChanged = true;
+                }
+
+                if (!['active', 'void', 'deleted'].includes(transactie.recordStatus)) {
+                    transactie.recordStatus = 'active';
+                    kassabewegingenChanged = true;
+                }
+
+                if (!transactie.transactionDate) {
+                    transactie.transactionDate = getEventDate();
+                    kassabewegingenChanged = true;
+                }
+
+                if (!transactie.transactionTime) {
+                    transactie.transactionTime = transactie.uur || '';
+                    kassabewegingenChanged = true;
+                }
+
+                if (!transactie.createdAt) {
+                    transactie.createdAt = getIsoDateTime(transactie.transactionDate, transactie.transactionTime);
+                    kassabewegingenChanged = true;
+                }
+
+                if (!transactie.updatedAt) {
+                    transactie.updatedAt = transactie.createdAt;
+                    kassabewegingenChanged = true;
+                }
+
+                (transactie.artikelen || []).forEach(artikel => {
+                    if (!artikel || typeof artikel !== 'object') return;
+
+                    if (!isUuid(artikel.lineItemId)) {
+                        artikel.lineItemId = createUuid();
+                        kassabewegingenChanged = true;
+                    }
+
+                    if (!isUuid(artikel.id)) {
+                        artikel.id = articleIdMap[artikel.id] || createUuid();
+                        kassabewegingenChanged = true;
+                    }
+                });
+            });
+
+            if (personenChanged) {
+                localStorage.setItem('kassa_personen', JSON.stringify(personen));
+            }
+
+            if (prijslijstChanged) {
+                savePrijslijst();
+            }
+
+            if (kassabewegingenChanged) {
+                localStorage.setItem('kassa_kassabewegingen', JSON.stringify(kassabewegingen));
+            }
+
+            if (startbedragChanged) {
+                localStorage.setItem('kassa_startbedrag', JSON.stringify(startbedrag));
+            }
+        }
+
         // ========== PRIJSLIJST ==========
         function leesPrijslijstUitStorage(key) {
             try {
@@ -1099,7 +1272,7 @@
             }
 
             prijslijst.push({
-                id: Date.now().toString(),
+                id: createUuid(),
                 naam: naam,
                 prijs: prijs,
                 actief: true
@@ -1341,6 +1514,7 @@
             const list = document.getElementById('artikelen_list');
             const row = document.createElement('div');
             row.className = 'artikel-item';
+            row.dataset.lineItemId = createUuid();
             row.innerHTML = `
                 <select onchange="updateSubtotaal()">
                     <option value="">--</option>
@@ -1387,6 +1561,7 @@
 
             return {
                 id: artikel && artikel.id ? artikel.id : `historisch-${index}`,
+                lineItemId: artikel && isUuid(artikel.lineItemId) ? artikel.lineItemId : createUuid(),
                 naam: artikel && artikel.naam ? artikel.naam : 'Onbekend artikel',
                 prijs: prijs,
                 aantal: aantal,
@@ -1400,6 +1575,7 @@
             const aantal = toNumber(aantalInput ? aantalInput.value : 0, 0);
 
             if (!select || !select.value) return null;
+            if (!row.dataset.lineItemId) row.dataset.lineItemId = createUuid();
 
             const selectedOption = select.options[select.selectedIndex];
             const artikel = prijslijst.find(a => a.id === select.value);
@@ -1410,6 +1586,7 @@
 
             return {
                 id: select.value,
+                lineItemId: row.dataset.lineItemId,
                 naam: naam || 'Onbekend artikel',
                 prijs_gebruikt: prijs,
                 aantal: aantal,
@@ -1508,7 +1685,19 @@
             const betaling = document.getElementById('kb_betaling').value;
             const scenario = document.getElementById('kb_scenario').value;
             const isBewerking = bewerkingTransactieId !== null;
-            const transactieId = isBewerking ? bewerkingTransactieId : Date.now().toString();
+            let bestaandeTransactie = null;
+            let bestaandeIndex = -1;
+
+            if (isBewerking) {
+                bestaandeIndex = kassabewegingen.findIndex(t => t.id === bewerkingTransactieId);
+                if (bestaandeIndex === -1) {
+                    showMessage('❌ Originele transactie niet gevonden. Wijziging niet opgeslagen.', 'error');
+                    return;
+                }
+                bestaandeTransactie = kassabewegingen[bestaandeIndex];
+            }
+
+            const transactieId = isBewerking ? bewerkingTransactieId : createUuid();
 
             if (!uur || !scenario) {
                 showMessage('⚠️ Voer uur en scenario in!', 'error');
@@ -1516,6 +1705,17 @@
             }
 
             let transactie;
+            const nowIso = new Date().toISOString();
+            const transactieMetadata = {
+                eventId: eventId,
+                deviceId: deviceId,
+                revision: isBewerking ? toNumber(bestaandeTransactie.revision, 1) + 1 : 1,
+                recordStatus: isBewerking ? (bestaandeTransactie.recordStatus || 'active') : 'active',
+                createdAt: isBewerking ? (bestaandeTransactie.createdAt || nowIso) : nowIso,
+                updatedAt: nowIso,
+                transactionDate: getEventDate(),
+                transactionTime: uur
+            };
 
             if (betaling === 'gift' && scenario === 'gift') {
                 // GIFT ZONDER AANKOOP - ALLEEN bedrag nodig
@@ -1527,6 +1727,14 @@
 
                 transactie = {
                     id: transactieId,
+                    eventId: transactieMetadata.eventId,
+                    deviceId: transactieMetadata.deviceId,
+                    revision: transactieMetadata.revision,
+                    recordStatus: transactieMetadata.recordStatus,
+                    createdAt: transactieMetadata.createdAt,
+                    updatedAt: transactieMetadata.updatedAt,
+                    transactionDate: transactieMetadata.transactionDate,
+                    transactionTime: transactieMetadata.transactionTime,
                     uur: uur,
                     type: 'gift',
                     artikelen: [],
@@ -1555,6 +1763,14 @@
 
                 transactie = {
                     id: transactieId,
+                    eventId: transactieMetadata.eventId,
+                    deviceId: transactieMetadata.deviceId,
+                    revision: transactieMetadata.revision,
+                    recordStatus: transactieMetadata.recordStatus,
+                    createdAt: transactieMetadata.createdAt,
+                    updatedAt: transactieMetadata.updatedAt,
+                    transactionDate: transactieMetadata.transactionDate,
+                    transactionTime: transactieMetadata.transactionTime,
                     uur: uur,
                     type: 'normale',
                     artikelen: artikelen,
@@ -1567,12 +1783,7 @@
             }
 
             if (isBewerking) {
-                const index = kassabewegingen.findIndex(t => t.id === bewerkingTransactieId);
-                if (index === -1) {
-                    showMessage('❌ Originele transactie niet gevonden. Wijziging niet opgeslagen.', 'error');
-                    return;
-                }
-                kassabewegingen[index] = transactie;
+                kassabewegingen[bestaandeIndex] = transactie;
             } else {
                 kassabewegingen.push(transactie);
             }
@@ -1627,6 +1838,7 @@
                     const snapshot = getHistorischArtikelSnapshot(a, index);
                     const row = document.createElement('div');
                     row.className = 'artikel-item';
+                    row.dataset.lineItemId = snapshot.lineItemId;
                     row.innerHTML = `
                         <select onchange="updateSubtotaal()" data-historisch-id="${escapeHtml(snapshot.id)}" data-historisch-naam="${escapeHtml(snapshot.naam)}" data-historisch-prijs="${snapshot.prijs}">
                             <option value="">--</option>
@@ -1906,14 +2118,178 @@
         }
 
         // ========== EXPORT & RESET ==========
-        function downloadJSON() {
-            const data = {
-                exported: new Date().toISOString(),
-                event: eventInfo,
-                prijslijst: prijslijst,
-                kassabewegingen: kassabewegingen,
-                startbedrag: startbedrag
+        function mapOpeningCashSourceType(value) {
+            if (value === 'vrijwilliger') return 'volunteer';
+            if (value === 'partij') return 'party';
+            return '';
+        }
+
+        function mapPaymentMethod(value) {
+            return value === 'kaart' ? 'card' : 'cash';
+        }
+
+        function getExportTransactionType(transactie) {
+            return transactie.type === 'gift' ? 'donation' : 'sale';
+        }
+
+        function buildExportPayment(transactie) {
+            const transactionType = getExportTransactionType(transactie);
+            const method = mapPaymentMethod(transactie.betalingwijze);
+            const subtotalCents = toCents(transactie.subtotaal);
+            const customerPaidCents = toCents(transactie.klant_gegeven);
+            const positiveDifferenceCents = Math.max(customerPaidCents - subtotalCents, 0);
+
+            let cashReceivedCents = 0;
+            let cashChangeGivenCents = 0;
+            let cardReceivedCents = 0;
+            let donationCents = 0;
+
+            if (transactionType === 'donation') {
+                donationCents = customerPaidCents;
+                if (method === 'card') {
+                    cardReceivedCents = customerPaidCents;
+                } else {
+                    cashReceivedCents = customerPaidCents;
+                }
+            } else if (method === 'card') {
+                cardReceivedCents = customerPaidCents;
+                if (transactie.scenario === 'wisselgeld') {
+                    cashChangeGivenCents = positiveDifferenceCents;
+                } else if (transactie.scenario === 'gift') {
+                    donationCents = positiveDifferenceCents;
+                }
+            } else {
+                cashReceivedCents = customerPaidCents;
+                if (transactie.scenario === 'wisselgeld') {
+                    cashChangeGivenCents = positiveDifferenceCents;
+                } else if (transactie.scenario === 'gift') {
+                    donationCents = positiveDifferenceCents;
+                }
+            }
+
+            return {
+                method: method,
+                scenario: transactie.scenario || '',
+                subtotalCents: subtotalCents,
+                customerPaidCents: customerPaidCents,
+                cashReceivedCents: cashReceivedCents,
+                cashChangeGivenCents: cashChangeGivenCents,
+                cardReceivedCents: cardReceivedCents,
+                donationCents: donationCents
             };
+        }
+
+        function buildExportLineItems(transactie) {
+            return (transactie.artikelen || []).map((artikel, index) => {
+                const snapshot = getHistorischArtikelSnapshot(artikel, index);
+                return {
+                    lineItemId: snapshot.lineItemId,
+                    articleId: snapshot.id,
+                    articleName: snapshot.naam,
+                    quantity: snapshot.aantal,
+                    unitPriceCents: toCents(snapshot.prijs),
+                    lineTotalCents: toCents(snapshot.subtotaal)
+                };
+            });
+        }
+
+        function buildExportTransaction(transactie) {
+            const transactionDate = transactie.transactionDate || getEventDate();
+            const transactionTime = transactie.transactionTime || transactie.uur || '';
+
+            return {
+                transactionId: transactie.id,
+                eventId: transactie.eventId || eventId,
+                deviceId: transactie.deviceId || deviceId,
+                revision: Number.isInteger(transactie.revision) && transactie.revision > 0 ? transactie.revision : 1,
+                recordStatus: ['active', 'void', 'deleted'].includes(transactie.recordStatus) ? transactie.recordStatus : 'active',
+                createdAt: transactie.createdAt || getIsoDateTime(transactionDate, transactionTime),
+                updatedAt: transactie.updatedAt || transactie.createdAt || getIsoDateTime(transactionDate, transactionTime),
+                transactionDate: transactionDate,
+                transactionTime: transactionTime,
+                transactionType: getExportTransactionType(transactie),
+                lineItems: buildExportLineItems(transactie),
+                payment: buildExportPayment(transactie),
+                note: transactie.opmerking || ''
+            };
+        }
+
+        function buildKassaExport() {
+            const transactions = kassabewegingen.map(buildExportTransaction);
+            const openingCashAmountCents = toCents(startbedrag.bedrag);
+            const totalCashCents = transactions.reduce((sum, transactie) => {
+                return sum + transactie.payment.cashReceivedCents - transactie.payment.cashChangeGivenCents;
+            }, 0);
+            const totalCardCents = transactions.reduce((sum, transactie) => {
+                return sum + transactie.payment.cardReceivedCents;
+            }, 0);
+
+            return {
+                schemaName: EXPORT_SCHEMA_NAME,
+                schemaVersion: EXPORT_SCHEMA_VERSION,
+                export: {
+                    exportId: createUuid(),
+                    exportedAt: new Date().toISOString(),
+                    exportType: 'full'
+                },
+                source: {
+                    app: 'kassa-tool',
+                    appVersion: AppState.version
+                },
+                device: {
+                    deviceId: deviceId,
+                    friendlyName: localStorage.getItem(DEVICE_FRIENDLY_NAME_STORAGE_KEY) || ''
+                },
+                event: {
+                    eventId: eventId,
+                    name: eventInfo.naam || '',
+                    location: eventInfo.locatie || '',
+                    date: eventInfo.datum || '',
+                    timezone: 'Europe/Brussels',
+                    currency: 'EUR'
+                },
+                data: {
+                    masterData: {
+                        people: personen.map(persoon => ({
+                            personId: persoon.id,
+                            firstName: persoon.voornaam || '',
+                            lastName: persoon.naam || '',
+                            email: persoon.email || '',
+                            phone: persoon.tel || '',
+                            iban: persoon.iban || '',
+                            active: persoon.active !== false
+                        })),
+                        articles: prijslijst.map(artikel => ({
+                            articleId: artikel.id,
+                            name: artikel.naam || '',
+                            priceCents: toCents(artikel.prijs),
+                            active: artikel.actief !== false
+                        }))
+                    },
+                    openingCash: {
+                        amountCents: openingCashAmountCents,
+                        sourceType: mapOpeningCashSourceType(startbedrag.oorsprong),
+                        personId: isUuid(startbedrag.persoon_id) ? startbedrag.persoon_id : null,
+                        personNameSnapshot: startbedrag.persoon_naam || ''
+                    },
+                    transactions: transactions
+                },
+                integrity: {
+                    transactionCount: transactions.length,
+                    totalCashCents: totalCashCents,
+                    totalCardCents: totalCardCents,
+                    expectedCashDrawerCents: openingCashAmountCents + totalCashCents,
+                    checksum: {
+                        algorithm: null,
+                        value: null
+                    }
+                }
+            };
+        }
+
+        function downloadJSON() {
+            migrateExportContractData();
+            const data = buildKassaExport();
 
             const json = JSON.stringify(data, null, 2);
             const blob = new Blob([json], { type: 'application/json' });
