@@ -435,6 +435,321 @@
             .app-header img { height: 48px; }
             .app-header-actions .btn-sm { padding: 8px 10px; font-size: 0.75em; }
         }
+        .retro-launch {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 16px;
+            align-items: center;
+            padding: 18px;
+            background: linear-gradient(135deg, #fff6dc, #f4dfb6);
+            border: 2px solid #d2a95d;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .retro-launch-title { font-size: 1.25em; font-weight: 800; color: #6d3f1f; margin-bottom: 4px; }
+        .retro-launch-text { color: #6b5a44; font-size: 0.95em; }
+        .retro-launch .btn { min-height: 64px; font-size: 1.05em; font-weight: 800; border-radius: 10px; }
+        .retro-kassa-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            display: none;
+            background: radial-gradient(circle at top left, #fff5d2 0%, #e2b764 38%, #8a4f24 100%);
+            padding: 14px;
+        }
+        .retro-kassa-overlay.show { display: block; }
+        .retro-shell {
+            height: 100%;
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr);
+            border-radius: 18px;
+            overflow: hidden;
+            background: #4c2d18;
+            border: 5px solid #2b1a10;
+            box-shadow: 0 20px 55px rgba(0,0,0,0.38);
+        }
+        .retro-topbar {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            gap: 14px;
+            align-items: center;
+            padding: 12px 14px;
+            background: linear-gradient(180deg, #c8442a, #922c1d);
+            color: white;
+        }
+        .retro-title { font-size: 1.35em; font-weight: 900; letter-spacing: 0.03em; }
+        .retro-display {
+            justify-self: end;
+            min-width: 250px;
+            padding: 10px 16px;
+            border-radius: 10px;
+            background: #152216;
+            color: #b9ff8f;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 2em;
+            font-weight: 900;
+            text-align: right;
+            box-shadow: inset 0 0 14px rgba(0,0,0,0.55);
+        }
+        .retro-close { min-height: 52px; min-width: 58px; border-radius: 10px; font-size: 1.25em; font-weight: 900; }
+        .retro-body {
+            min-height: 0;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(240px, 0.68fr) minmax(300px, 0.78fr);
+            gap: 10px;
+            padding: 10px;
+            background: #f2dfbd;
+        }
+        .retro-panel {
+            min-height: 0;
+            border-radius: 14px;
+            background: #fffaf0;
+            border: 3px solid #7c4a25;
+            box-shadow: inset 0 0 0 2px rgba(255,255,255,0.7);
+            padding: 10px;
+            overflow: hidden;
+        }
+        .retro-panel-title { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-bottom: 8px; color: #5b351e; font-weight: 900; font-size: 0.98em; }
+        .retro-article-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+            gap: 7px;
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .retro-article-btn {
+            min-height: 58px;
+            border: 2px solid #7c4a25;
+            border-radius: 10px;
+            background:
+                linear-gradient(135deg, rgba(255,255,255,0.78), rgba(255,255,255,0) 46%),
+                var(--retro-product-color, #f4dba9);
+            color: #2d2017;
+            box-shadow: 0 4px 0 #7c4a25, 0 8px 14px rgba(80, 45, 18, 0.14);
+            font-weight: 900;
+            font-size: 0.84em;
+            cursor: pointer;
+            text-align: left;
+            padding: 7px;
+            touch-action: manipulation;
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            gap: 6px;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .retro-article-btn:active, .retro-article-btn.added {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #7c4a25;
+            background: #dff0d3;
+        }
+        .retro-article-badge {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            display: grid;
+            place-items: center;
+            background: rgba(255,255,255,0.74);
+            border: 2px solid rgba(124,74,37,0.34);
+            color: #7c2e1c;
+            font-size: 0.78em;
+            font-weight: 950;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.65);
+        }
+        .retro-article-copy {
+            min-width: 0;
+            display: grid;
+            gap: 3px;
+        }
+        .retro-article-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            line-height: 1.12;
+        }
+        .retro-article-price {
+            justify-self: start;
+            display: inline-flex;
+            align-items: center;
+            min-height: 20px;
+            padding: 1px 7px;
+            border-radius: 999px;
+            background: rgba(200, 68, 42, 0.1);
+            color: #c8442a;
+            font-size: 0.84em;
+            font-weight: 950;
+        }
+        .retro-cart-panel {
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr);
+            gap: 8px;
+        }
+        .retro-controls-panel {
+            display: grid;
+            grid-template-rows: auto auto auto auto auto;
+            gap: 8px;
+        }
+        .retro-cart {
+            min-height: 0;
+            overflow-y: auto;
+            border-radius: 10px;
+            background: white;
+            border: 2px dashed #c7a46d;
+            padding: 8px;
+            transition: transform 0.18s ease;
+        }
+        .retro-cart.bump { transform: scale(1.018); }
+        .retro-empty { height: 100%; display: grid; place-items: center; text-align: center; color: #9b8666; font-weight: 800; font-size: 0.98em; }
+        .retro-cart-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto auto;
+            gap: 6px;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #ead9bd;
+        }
+        .retro-cart-row:last-child { border-bottom: none; }
+        .retro-cart-name { font-weight: 900; color: #2d2017; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .retro-cart-sub { color: #715d45; font-size: 0.8em; margin-top: 1px; }
+        .retro-qty-controls { display: flex; align-items: center; gap: 4px; }
+        .retro-qty-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            border: 2px solid #7c4a25;
+            background: #fff2d3;
+            color: #5b351e;
+            font-size: 1.1em;
+            font-weight: 900;
+        }
+        .retro-qty-number { min-width: 28px; text-align: center; font-weight: 900; font-size: 0.98em; }
+        .retro-cart-delete {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            border: 2px solid #c8442a;
+            background: #fff2ee;
+            color: #c8442a;
+            font-size: 0.92em;
+            font-weight: 900;
+            touch-action: manipulation;
+        }
+        .retro-cart-delete:active { transform: translateY(2px); background: #ffd8cf; }
+        .retro-keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+        .retro-key {
+            min-height: 45px;
+            border: 2px solid #2d2017;
+            border-radius: 9px;
+            background: linear-gradient(180deg, #4f5a47, #2d3928);
+            color: white;
+            font-size: 1.18em;
+            font-weight: 900;
+            box-shadow: 0 4px 0 #182013;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .retro-key:active { transform: translateY(3px); box-shadow: 0 1px 0 #182013; }
+        .retro-key-display {
+            min-height: 44px;
+            display: grid;
+            place-items: center;
+            border-radius: 10px;
+            background: #152216;
+            color: #b9ff8f;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 1.34em;
+            font-weight: 900;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.52);
+        }
+        .retro-touch-btn {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .retro-payment-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 4px; }
+        .retro-payment-btn {
+            min-height: 45px;
+            border-radius: 9px;
+            font-size: 0.92em;
+            font-weight: 900;
+            border: 3px solid transparent;
+        }
+        .retro-payment-btn.active { border-color: #152216; box-shadow: 0 0 0 3px rgba(21,34,22,0.18); }
+        .retro-scenario-panel {
+            border-radius: 10px;
+            border: 2px solid #c7a46d;
+            background: #fff6df;
+            padding: 8px;
+            display: grid;
+            gap: 6px;
+        }
+        .retro-scenario-title {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            color: #5b351e;
+            font-weight: 900;
+            font-size: 0.84em;
+        }
+        .retro-paid-input {
+            width: 100%;
+            min-height: 38px;
+            border-radius: 8px;
+            border: 2px solid #7c4a25;
+            padding: 6px 8px;
+            font-size: 1.02em;
+            font-weight: 900;
+            text-align: right;
+            background: white;
+        }
+        .retro-scenario-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+        }
+        .retro-scenario-btn {
+            min-height: 34px;
+            border-radius: 8px;
+            border: 2px solid #7c4a25;
+            background: #fffaf0;
+            color: #4b2c18;
+            font-weight: 900;
+            font-size: 0.76em;
+            touch-action: manipulation;
+        }
+        .retro-scenario-btn.active {
+            background: #99ad7a;
+            color: white;
+            border-color: #5d7141;
+        }
+        .retro-scenario-help {
+            min-height: 16px;
+            color: #715d45;
+            font-size: 0.76em;
+            font-weight: 700;
+        }
+        .retro-save {
+            width: 100%;
+            min-height: 54px;
+            margin-top: 4px;
+            border-radius: 12px;
+            font-size: 1.02em;
+            font-weight: 900;
+        }
+        @media (max-width: 900px) {
+            .retro-body { grid-template-columns: 1fr; overflow-y: auto; }
+            .retro-article-grid { max-height: none; }
+            .retro-display { min-width: 190px; font-size: 1.55em; }
+            .retro-topbar { grid-template-columns: auto 1fr; }
+            .retro-title { grid-column: 1 / -1; }
+        }
     </style>
 </head>
 <body>
@@ -645,6 +960,14 @@
                     <div class="section">
                         <h2 id="transactie_form_titel">➕ Nieuwe Transactie</h2>
 
+                        <div class="retro-launch">
+                            <div>
+                                <div class="retro-launch-title">🛒 Nieuwe transactie in retro-kassa</div>
+                                <div class="retro-launch-text">Grote artikelknoppen, winkelkar en aantalknoppen voor tabletbediening.</div>
+                            </div>
+                            <button class="btn btn-success" onclick="openRetroKassa()">🛒 OPEN KASSA</button>
+                        </div>
+
                         <div class="form-row">
                             <div>
                                 <label>⏰ Uur</label>
@@ -728,6 +1051,75 @@
                     <div style="margin-top: 30px;">
                         <button class="btn btn-danger" style="width: 100%; padding: 15px; font-size: 1em;" onclick="showPreview('close')">🔒 AFSLUITEN KASSA</button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RETRO KASSA SCHERM -->
+    <div id="retroKassaOverlay" class="retro-kassa-overlay">
+        <div class="retro-shell">
+            <div class="retro-topbar">
+                <button class="btn btn-warning retro-close" onclick="closeRetroKassa()">✕</button>
+                <div class="retro-title">🛒 RETRO KASSA</div>
+                <div class="retro-display" id="retro_total_display">€ 0,00</div>
+            </div>
+            <div class="retro-body">
+                <div class="retro-panel">
+                    <div class="retro-panel-title">
+                        <span>📦 Artikelen</span>
+                        <span id="retro_article_count">0 actief</span>
+                    </div>
+                    <div id="retro_article_grid" class="retro-article-grid"></div>
+                </div>
+                <div class="retro-panel retro-cart-panel">
+                    <div class="retro-panel-title">
+                        <span>🛒 Winkelkar</span>
+                        <button class="btn btn-warning btn-sm" onclick="clearRetroCart()">Leegmaken</button>
+                    </div>
+                    <div id="retro_cart" class="retro-cart"></div>
+                </div>
+                <div class="retro-panel retro-controls-panel">
+                    <div class="retro-panel-title">
+                        <span>🔢 Aantal</span>
+                        <span id="retro_selected_label">Geen artikel</span>
+                    </div>
+                    <div id="retro_key_display" class="retro-key-display">--</div>
+                    <div>
+                        <div class="retro-keypad">
+                            <button class="retro-key" onclick="pressRetroQtyDigit(1)">1</button>
+                            <button class="retro-key" onclick="pressRetroQtyDigit(2)">2</button>
+                            <button class="retro-key" onclick="pressRetroQtyDigit(3)">3</button>
+                            <button class="retro-key" onclick="pressRetroQtyDigit(4)">4</button>
+                            <button class="retro-key" onclick="pressRetroQtyDigit(5)">5</button>
+                            <button class="retro-key" onclick="pressRetroQtyDigit(6)">6</button>
+                            <button class="retro-key" onclick="pressRetroQtyDigit(7)">7</button>
+                            <button class="retro-key" onclick="pressRetroQtyDigit(8)">8</button>
+                            <button class="retro-key" onclick="pressRetroQtyDigit(9)">9</button>
+                            <button class="retro-key" onclick="clearRetroQtyBuffer()">C</button>
+                            <button class="retro-key" onclick="pressRetroQtyDigit(0)">0</button>
+                            <button class="retro-key" onclick="changeRetroSelectedQty(1)">+</button>
+                        </div>
+                    </div>
+                    <div class="retro-payment-grid">
+                        <button id="retro_pay_cash" class="btn btn-success retro-payment-btn active" onclick="setRetroPayment('cash')">💵 CASH</button>
+                        <button id="retro_pay_kaart" class="btn btn-info retro-payment-btn" onclick="setRetroPayment('kaart')">💳 KAART</button>
+                        <button id="retro_pay_gift" class="btn btn-primary retro-payment-btn" onclick="setRetroPayment('gift')">🎁 GIFT</button>
+                    </div>
+                    <div id="retro_sale_scenario_panel" class="retro-scenario-panel">
+                        <div class="retro-scenario-title">
+                            <span>💶 Betaald bedrag</span>
+                            <span id="retro_change_label">Exact</span>
+                        </div>
+                        <input id="retro_paid_amount" class="retro-paid-input" type="number" inputmode="decimal" min="0" step="0.01" onchange="updateRetroPaidAmount(this.value)" oninput="updateRetroPaidAmount(this.value)">
+                        <div class="retro-scenario-grid">
+                            <button id="retro_scenario_exact" class="retro-scenario-btn active" onclick="setRetroSaleScenario('exact')">Exact</button>
+                            <button id="retro_scenario_wisselgeld" class="retro-scenario-btn" onclick="setRetroSaleScenario('wisselgeld')">Wisselgeld</button>
+                            <button id="retro_scenario_gift" class="retro-scenario-btn" onclick="setRetroSaleScenario('gift')">Gift</button>
+                        </div>
+                        <div id="retro_scenario_help" class="retro-scenario-help">Klant betaalt exact het totaal.</div>
+                    </div>
+                    <button class="btn btn-success retro-save" onclick="saveRetroTransaction()">✅ TRANSACTIE OPSLAAN</button>
                 </div>
             </div>
         </div>
@@ -857,7 +1249,7 @@
     <script>
         // Data
         const AppState = {
-            version: "1.2.0",
+            version: "1.2.5",
             safeToReload: true,
             transactionOpen: false,
             exportBusy: false,
@@ -884,6 +1276,13 @@
         let deviceId = getOrCreateStorageUuid(DEVICE_ID_STORAGE_KEY);
         let deviceFriendlyName = localStorage.getItem(DEVICE_FRIENDLY_NAME_STORAGE_KEY) || '';
         let eventId = getOrCreateStorageUuid(EVENT_ID_STORAGE_KEY);
+        let retroCart = [];
+        let retroSelectedArticleId = '';
+        let retroPayment = 'cash';
+        let retroDonationAmount = 0;
+        let retroQtyBuffer = '';
+        let retroScenario = 'exact';
+        let retroPaidAmount = 0;
 
         ensureDeviceFriendlyName();
         migrateExportContractData();
@@ -1995,6 +2394,388 @@
 
             if (document.getElementById('kb_oorsprong').value === 'vrijwilliger') {
                 showVrijwilligerInfo();
+            }
+        }
+
+        // ========== RETRO KASSA ==========
+        function formatEuro(value) {
+            return `€ ${toNumber(value, 0).toFixed(2).replace('.', ',')}`;
+        }
+
+        function retroActiveArticles() {
+            return prijslijst.filter(a => a && a.actief !== false);
+        }
+
+        function retroCartTotal() {
+            return retroCart.reduce((sum, item) => sum + item.aantal * item.prijs, 0);
+        }
+
+        function syncRetroExactPaidAmount() {
+            if (retroPayment !== 'gift' && retroScenario === 'exact') {
+                retroPaidAmount = retroCartTotal();
+            }
+        }
+
+        function openRetroKassa() {
+            if (bewerkingTransactieId !== null) {
+                showMessage('⚠️ Rond eerst de actieve wijziging af of annuleer ze.', 'warning');
+                return;
+            }
+            if (retroActiveArticles().length === 0) {
+                showMessage('⚠️ Voeg eerst actieve artikelen toe aan de prijslijst.', 'error');
+                return;
+            }
+            retroCart = [];
+            retroSelectedArticleId = '';
+            retroPayment = 'cash';
+            retroDonationAmount = 0;
+            retroQtyBuffer = '';
+            retroScenario = 'exact';
+            retroPaidAmount = 0;
+            AppState.modalOpen = true;
+            renderRetroKassa();
+            document.getElementById('retroKassaOverlay').classList.add('show');
+        }
+
+        function closeRetroKassa() {
+            document.getElementById('retroKassaOverlay').classList.remove('show');
+            AppState.modalOpen = false;
+        }
+
+        function addRetroArticle(articleId) {
+            const artikel = prijslijst.find(a => a.id === articleId && a.actief !== false);
+            if (!artikel) return;
+            if (retroPayment === 'gift') {
+                retroPayment = 'cash';
+                retroDonationAmount = 0;
+            }
+            const existing = retroCart.find(item => item.id === articleId);
+            if (existing) {
+                existing.aantal += 1;
+            } else {
+                retroCart.push({
+                    id: artikel.id,
+                    naam: artikel.naam,
+                    prijs: toNumber(artikel.prijs, 0),
+                    aantal: 1
+                });
+            }
+            retroSelectedArticleId = articleId;
+            retroQtyBuffer = '';
+            syncRetroExactPaidAmount();
+            renderRetroKassa(true);
+        }
+
+        function changeRetroQty(articleId, delta) {
+            const item = retroCart.find(row => row.id === articleId);
+            if (!item) return;
+            item.aantal += delta;
+            if (item.aantal <= 0) {
+                retroCart = retroCart.filter(row => row.id !== articleId);
+                if (retroSelectedArticleId === articleId) {
+                    retroSelectedArticleId = retroCart[0] ? retroCart[0].id : '';
+                    retroQtyBuffer = '';
+                }
+            }
+            syncRetroExactPaidAmount();
+            renderRetroKassa(true);
+        }
+
+        function changeRetroSelectedQty(delta) {
+            if (!retroSelectedArticleId) {
+                showMessage('Tik eerst een artikel in de retro-kassa aan.', 'warning');
+                return;
+            }
+            retroQtyBuffer = '';
+            changeRetroQty(retroSelectedArticleId, delta);
+        }
+
+        function setRetroSelectedQty(qty) {
+            if (!retroSelectedArticleId) {
+                showMessage('Tik eerst een artikel in de retro-kassa aan.', 'warning');
+                return;
+            }
+            const item = retroCart.find(row => row.id === retroSelectedArticleId);
+            if (!item) return;
+            item.aantal = Math.max(1, qty);
+            syncRetroExactPaidAmount();
+            renderRetroKassa(true);
+        }
+
+        function pressRetroQtyDigit(digit) {
+            if (!retroSelectedArticleId) {
+                showMessage('Tik eerst een artikel in de retro-kassa aan.', 'warning');
+                return;
+            }
+            const item = retroCart.find(row => row.id === retroSelectedArticleId);
+            if (!item) return;
+            const nextBuffer = `${retroQtyBuffer}${digit}`.replace(/^0+/, '');
+            retroQtyBuffer = nextBuffer.slice(0, 3);
+            const qty = parseInt(retroQtyBuffer || '0', 10);
+            item.aantal = Math.max(1, qty);
+            renderRetroKassa(true);
+        }
+
+        function clearRetroQtyBuffer() {
+            retroQtyBuffer = '';
+            renderRetroKassa();
+        }
+
+        function removeRetroSelected() {
+            if (!retroSelectedArticleId) {
+                showMessage('Tik eerst een artikel in de winkelkar aan.', 'warning');
+                return;
+            }
+            removeRetroItem(retroSelectedArticleId);
+        }
+
+        function removeRetroItem(articleId) {
+            retroCart = retroCart.filter(row => row.id !== articleId);
+            if (retroSelectedArticleId === articleId) {
+                retroSelectedArticleId = retroCart[0] ? retroCart[0].id : '';
+            }
+            retroQtyBuffer = '';
+            syncRetroExactPaidAmount();
+            renderRetroKassa(true);
+        }
+
+        function clearRetroCart() {
+            retroCart = [];
+            retroSelectedArticleId = '';
+            retroDonationAmount = 0;
+            retroQtyBuffer = '';
+            retroScenario = 'exact';
+            retroPaidAmount = 0;
+            renderRetroKassa();
+        }
+
+        function setRetroPayment(method) {
+            if (method === 'gift') {
+                const input = prompt('Giftbedrag (€):', retroDonationAmount > 0 ? retroDonationAmount.toFixed(2) : '');
+                if (input === null) return;
+                const bedrag = parseFloat(String(input).replace(',', '.'));
+                if (!Number.isFinite(bedrag) || bedrag <= 0) {
+                    showMessage('⚠️ Voer een geldig giftbedrag in.', 'error');
+                    return;
+                }
+                retroCart = [];
+                retroSelectedArticleId = '';
+                retroDonationAmount = bedrag;
+                retroQtyBuffer = '';
+                retroScenario = 'gift';
+                retroPaidAmount = bedrag;
+            } else {
+                retroDonationAmount = 0;
+                if (retroPayment === 'gift') {
+                    retroScenario = 'exact';
+                    retroPaidAmount = retroCartTotal();
+                }
+            }
+            retroPayment = method;
+            syncRetroExactPaidAmount();
+            renderRetroKassa();
+        }
+
+        function retroTotal() {
+            if (retroPayment === 'gift') return retroDonationAmount;
+            return retroCartTotal();
+        }
+
+        function setRetroSaleScenario(scenario) {
+            retroScenario = scenario;
+            if (scenario === 'exact') {
+                retroPaidAmount = retroCartTotal();
+            } else if (retroPaidAmount <= retroCartTotal()) {
+                retroPaidAmount = retroCartTotal();
+            }
+            renderRetroKassa();
+        }
+
+        function updateRetroPaidAmount(value) {
+            const parsed = parseFloat(String(value || '').replace(',', '.'));
+            retroPaidAmount = Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+            if (Math.abs(retroPaidAmount - retroCartTotal()) < 0.01 && retroPayment !== 'gift') {
+                retroScenario = 'exact';
+            }
+            renderRetroKassa();
+        }
+
+        function retroScenarioText(total, paid) {
+            if (retroPayment === 'gift') return 'Gift zonder aankoop';
+            const diff = paid - total;
+            if (retroScenario === 'exact') return 'Klant betaalt exact het totaal.';
+            if (retroScenario === 'gift') return diff > 0 ? `Verschil ${formatEuro(diff)} wordt gift.` : 'Betaald bedrag moet hoger zijn dan totaal.';
+            if (retroScenario === 'wisselgeld') return diff > 0 ? `Wisselgeld ${formatEuro(diff)}.` : 'Betaald bedrag moet hoger zijn dan totaal.';
+            return '';
+        }
+
+        function retroArticleColor(artikel) {
+            const palette = ['#f6d59b', '#b9ddb0', '#a9d9e8', '#f5b7a6', '#d9c0f0', '#f1e68c', '#bdd7ff', '#ffc7df'];
+            const name = String(artikel?.naam || artikel?.id || '');
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) {
+                hash = ((hash << 5) - hash) + name.charCodeAt(i);
+                hash |= 0;
+            }
+            return palette[Math.abs(hash) % palette.length];
+        }
+
+        function retroArticleBadge(artikel) {
+            const name = String(artikel?.naam || '?').trim();
+            const words = name.split(/\s+/).filter(Boolean);
+            const first = words[0]?.charAt(0) || '?';
+            const second = words.length > 1 ? words[1].charAt(0) : (words[0]?.charAt(1) || '');
+            return escapeHtml(`${first}${second}`.toUpperCase());
+        }
+
+        function renderRetroKassa(bumpCart = false) {
+            const grid = document.getElementById('retro_article_grid');
+            const cart = document.getElementById('retro_cart');
+            const total = retroTotal();
+            const activeArticles = retroActiveArticles();
+            const saleTotal = retroCartTotal();
+            const paidAmount = retroPayment === 'gift' ? retroDonationAmount : (retroScenario === 'exact' ? saleTotal : retroPaidAmount);
+            const changeAmount = paidAmount - saleTotal;
+
+            document.getElementById('retro_total_display').textContent = formatEuro(total);
+            document.getElementById('retro_article_count').textContent = `${activeArticles.length} actief`;
+            const selectedItem = retroCart.find(row => row.id === retroSelectedArticleId);
+            const selectedLabel = document.getElementById('retro_selected_label');
+            const keyDisplay = document.getElementById('retro_key_display');
+            if (selectedLabel) selectedLabel.textContent = selectedItem ? selectedItem.naam : 'Geen artikel';
+            if (keyDisplay) keyDisplay.textContent = selectedItem ? String(retroQtyBuffer || selectedItem.aantal) : '--';
+            const paidInput = document.getElementById('retro_paid_amount');
+            const scenarioPanel = document.getElementById('retro_sale_scenario_panel');
+            const changeLabel = document.getElementById('retro_change_label');
+            const scenarioHelp = document.getElementById('retro_scenario_help');
+            if (scenarioPanel) scenarioPanel.style.display = retroPayment === 'gift' ? 'none' : 'grid';
+            if (paidInput && document.activeElement !== paidInput) paidInput.value = (paidAmount || 0).toFixed(2);
+            if (changeLabel) {
+                changeLabel.textContent = retroScenario === 'exact'
+                    ? 'Exact'
+                    : (changeAmount > 0 ? `+ ${formatEuro(changeAmount)}` : 'Te laag');
+            }
+            if (scenarioHelp) scenarioHelp.textContent = retroScenarioText(saleTotal, paidAmount);
+            ['exact', 'wisselgeld', 'gift'].forEach(scenario => {
+                const btn = document.getElementById(`retro_scenario_${scenario}`);
+                if (btn) btn.classList.toggle('active', retroScenario === scenario);
+            });
+
+            grid.innerHTML = activeArticles.map(artikel => `
+                <button class="retro-article-btn ${retroSelectedArticleId === artikel.id ? 'added' : ''}" style="--retro-product-color:${retroArticleColor(artikel)};" onclick="addRetroArticle('${artikel.id}')">
+                    <span class="retro-article-badge">${retroArticleBadge(artikel)}</span>
+                    <span class="retro-article-copy">
+                        <span class="retro-article-name">${escapeHtml(artikel.naam)}</span>
+                        <span class="retro-article-price">${formatEuro(artikel.prijs)}</span>
+                    </span>
+                </button>
+            `).join('');
+
+            if (retroCart.length === 0) {
+                cart.innerHTML = retroPayment === 'gift' && retroDonationAmount > 0
+                    ? `<div class="retro-empty">🎁<br>Gift zonder aankoop<br><strong>${formatEuro(retroDonationAmount)}</strong></div>`
+                    : '<div class="retro-empty">🛒<br>Winkelkar leeg<br><span style="font-size:0.8em;">Tik links op een artikel</span></div>';
+            } else {
+                cart.innerHTML = retroCart.map(item => `
+                    <div class="retro-cart-row" style="${retroSelectedArticleId === item.id ? 'background:#fff7df;' : ''}">
+                        <div onclick="retroSelectedArticleId='${item.id}'; retroQtyBuffer=''; renderRetroKassa();" style="min-width:0;">
+                            <div class="retro-cart-name">${escapeHtml(item.naam)}</div>
+                            <div class="retro-cart-sub">${item.aantal} x ${formatEuro(item.prijs)} = <strong>${formatEuro(item.aantal * item.prijs)}</strong></div>
+                        </div>
+                        <div class="retro-qty-controls">
+                            <button class="retro-qty-btn" onclick="changeRetroQty('${item.id}', -1)">−</button>
+                            <span class="retro-qty-number">${item.aantal}</span>
+                            <button class="retro-qty-btn" onclick="changeRetroQty('${item.id}', 1)">+</button>
+                        </div>
+                        <button class="retro-cart-delete" title="Verwijder artikel" onclick="removeRetroItem('${item.id}')">🗑</button>
+                    </div>
+                `).join('');
+            }
+
+            ['cash', 'kaart', 'gift'].forEach(method => {
+                const btn = document.getElementById(`retro_pay_${method}`);
+                if (btn) btn.classList.toggle('active', retroPayment === method);
+            });
+
+            if (bumpCart) {
+                cart.classList.add('bump');
+                window.setTimeout(() => cart.classList.remove('bump'), 180);
+            }
+        }
+
+        function syncRetroCartToClassicForm() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const total = retroTotal();
+            const saleTotal = retroCartTotal();
+            const paidAmount = retroPayment === 'gift'
+                ? retroDonationAmount
+                : (retroScenario === 'exact' ? saleTotal : retroPaidAmount);
+            const list = document.getElementById('artikelen_list');
+
+            document.getElementById('kb_uur').value = `${hours}:${minutes}`;
+            document.getElementById('kb_betaling').value = retroPayment === 'kaart' ? 'kaart' : (retroPayment === 'gift' ? 'gift' : 'cash');
+            updateScenarios();
+
+            list.innerHTML = '';
+
+            if (retroPayment === 'gift') {
+                document.getElementById('kb_scenario').value = 'gift';
+                document.getElementById('kb_klant').value = paidAmount.toFixed(2);
+                document.getElementById('kb_subtotaal').value = '0.00';
+                generateOpmerking();
+                return;
+            }
+
+            document.getElementById('kb_scenario').value = retroScenario;
+            retroCart.forEach(item => {
+                const artikel = prijslijst.find(a => a.id === item.id) || item;
+                const row = document.createElement('div');
+                row.className = 'artikel-item';
+                row.dataset.lineItemId = createUuid();
+                row.innerHTML = `
+                    <select onchange="updateSubtotaal()">
+                        <option value="">--</option>
+                        ${renderArtikelOption({ id: item.id, naam: artikel.naam || item.naam, prijs: item.prijs }, true)}
+                        ${prijslijst.filter(p => p.actief !== false && p.id !== item.id).map(p => renderArtikelOption(p)).join('')}
+                    </select>
+                    <input type="number" value="${item.aantal}" min="1" onchange="updateSubtotaal()">
+                    <input type="number" disabled value="${(item.aantal * item.prijs).toFixed(2)}">
+                    <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove(); updateSubtotaal();">🗑️</button>
+                `;
+                list.appendChild(row);
+            });
+            document.getElementById('kb_klant').value = paidAmount.toFixed(2);
+            updateSubtotaal();
+        }
+
+        function saveRetroTransaction() {
+            if (retroPayment !== 'gift' && retroCart.length === 0) {
+                showMessage('⚠️ Winkelkar is leeg.', 'error');
+                return;
+            }
+            if (retroPayment === 'gift' && retroDonationAmount <= 0) {
+                showMessage('⚠️ Voer eerst een giftbedrag in.', 'error');
+                return;
+            }
+            if (retroPayment !== 'gift') {
+                const total = retroCartTotal();
+                const paidAmount = retroScenario === 'exact' ? total : retroPaidAmount;
+                if (retroScenario !== 'exact' && paidAmount <= total) {
+                    showMessage('⚠️ Betaald bedrag moet hoger zijn dan het totaal voor wisselgeld of gift.', 'error');
+                    return;
+                }
+            }
+
+            syncRetroCartToClassicForm();
+            const transactionCountBefore = kassabewegingen.length;
+            addKasTransactie();
+            if (kassabewegingen.length > transactionCountBefore) {
+                closeRetroKassa();
+                clearRetroCart();
+            } else {
+                renderRetroKassa();
             }
         }
 
