@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.2
+- Versie zichtbaar gemaakt in de Kassa Tool-header zodat de juiste PWA-versie meteen controleerbaar is.
+- Prijslijsttabel uitgebreid met artikelnummer, categorie en aparte kolom voor wijzigingen.
+- Wijzigingslabels worden nu dynamisch bepaald tegenover de officiële beginprijslijst.
+- `Status gewijzigd` verdwijnt opnieuw wanneer een artikel terug op zijn oorspronkelijke actief/inactief-status wordt gezet.
+- Geen wijziging aan transactielogica, Google Drive-import, retro-kassa, exportcontract of opslagstructuur.
+
 ## 1.3.1
 - Sync-statuslaag voor tabletgebruik toegevoegd: Prijslijst toont nu actief/inactief, event-lock en offline-klaarstatus.
 - Retro-kassa waarschuwt wanneer er nog geen officiële Hoofdapp-prijslijst lokaal geladen is, zonder verkoop te blokkeren.
