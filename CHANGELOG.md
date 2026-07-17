@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.3
+- Bugfix: `Status gewijzigd` verdwijnt nu correct wanneer een artikel teruggezet wordt naar zijn oorspronkelijke actief/inactief-status.
+- Voor oudere lokaal geladen prijslijsten zonder officiële beginstatus wordt vanaf de eerste statuswijziging een lokale baseline bewaard.
+- Versiebadge verhoogd naar `v1.3.3`.
+- Geen wijziging aan transactielogica, Google Drive-import, retro-kassa, exportcontract of opslagstructuur.
+
 ## 1.3.2
 - Versie zichtbaar gemaakt in de Kassa Tool-header zodat de juiste PWA-versie meteen controleerbaar is.
 - Prijslijsttabel uitgebreid met artikelnummer, categorie en aparte kolom voor wijzigingen.
