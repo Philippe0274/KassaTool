@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0
+- Google Drive Sync fase 2B toegevoegd: de Kassa Tool kan de officiële beginprijslijst ophalen uit `EventToolSync`.
+- Nieuw sync-paneel in het tabblad Prijslijst met verbinden, sync-test en `Prijslijst ophalen`.
+- De Kassa Tool leest `kassa-tool-official-start-pricelist.json`, controleert schemaName/schemaVersion/eventId/categorieën/artikelen/prijzen en bewaart pas daarna de prijslijst lokaal.
+- Na een geldige import wordt de prijslijst offline beschikbaar op de tablet en neemt de Kassa Tool het eventId uit de Hoofdapp over.
+- Veiligheidsregel: laden uit Drive wordt geblokkeerd zodra er al transacties op de tablet staan.
+- Geen transacties-upload, eindprijslijst-sync, Hoofdapp-import, ledger of financiële verwerking toegevoegd.
+
 ## 1.2.5
 - Retro-kassa compacter gemaakt voor tablets: artikeltegels, winkelkarregels en rechterbediening nemen minder ruimte in.
 - Rechterpaneel krijgt meer bruikbare breedte zodat betaalwijze, scenario en opslaan niet meer overlappen.
