@@ -39,7 +39,27 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .app-header h1 { margin: 0; font-size: 1.5em; }
-        .app-header-actions { display: flex; gap: 10px; }
+        .app-header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .header-identity {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-right: 2px;
+        }
+        .header-identity-pill {
+            background: rgba(255,255,255,0.18);
+            border: 1px solid rgba(255,255,255,0.4);
+            border-radius: 999px;
+            padding: 5px 9px;
+            font-size: 0.78em;
+            font-weight: 800;
+            color: white;
+            max-width: 190px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
         
         /* Logo styling */
         .app-header img {
@@ -854,10 +874,14 @@
                 </svg>
                 <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
                     <h1 style="white-space: nowrap;">💳 Kassa Tool</h1>
-                    <span id="app_version_badge" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);border-radius:999px;padding:4px 9px;font-size:0.78em;font-weight:800;">v1.4.2</span>
+                    <span id="app_version_badge" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);border-radius:999px;padding:4px 9px;font-size:0.78em;font-weight:800;">v1.4.3</span>
                 </div>
             </div>
             <div class="app-header-actions">
+                <div class="header-identity">
+                    <span id="header_device_name" class="header-identity-pill">Kassapunt ontbreekt</span>
+                    <span id="header_operator_name" class="header-identity-pill">Gebruiker ontbreekt</span>
+                </div>
                 <button class="btn btn-info btn-sm" onclick="showKassaPopup()">💰 KASSA</button>
                 <button class="btn btn-primary btn-sm" onclick="showPreview('view')">👁️ PREVIEW</button>
                 <button id="header_export_btn" class="btn btn-primary btn-sm" onclick="downloadJSON()" style="display:none;">📥 EXPORT</button>
@@ -900,6 +924,21 @@
                             <div>
                                 <label>Datum Event</label>
                                 <input type="date" id="ev_datum">
+                            </div>
+                        </div>
+
+                        <h3>🏷️ Tablet / verantwoordelijke</h3>
+                        <p style="color:#666;font-size:0.9em;margin-top:-5px;">
+                            Deze gegevens verschijnen in de header en worden meegestuurd in elke kassa-export.
+                        </p>
+                        <div class="form-row">
+                            <div>
+                                <label>Kassapunt / tabletnaam</label>
+                                <input type="text" id="ev_device_name" placeholder="Bijv. Bar links, Inkom, Eetstand">
+                            </div>
+                            <div>
+                                <label>Gebruiker / verantwoordelijke</label>
+                                <input type="text" id="ev_operator_name" placeholder="Bijv. Philippe">
                             </div>
                         </div>
 
@@ -1479,7 +1518,7 @@
     <script>
         // Data
         const AppState = {
-            version: "1.4.2",
+            version: "1.4.3",
             safeToReload: true,
             transactionOpen: false,
             exportBusy: false,
@@ -1495,6 +1534,7 @@
         const EXPORT_SCHEMA_VERSION = '1.0.0';
         const DEVICE_ID_STORAGE_KEY = 'kassa_device_id';
         const DEVICE_FRIENDLY_NAME_STORAGE_KEY = 'kassa_device_friendly_name';
+        const OPERATOR_NAME_STORAGE_KEY = 'kassa_operator_name';
         const EVENT_ID_STORAGE_KEY = 'kassa_event_id';
         const CASH_SESSION_STORAGE_KEY = 'kassa_cash_session';
         const MANIFIESTA_STORAGE_KEY = 'kassa_manifiesta_tickets';
@@ -1526,6 +1566,7 @@
         let bewerkingTransactieId = null;
         let deviceId = getOrCreateStorageUuid(DEVICE_ID_STORAGE_KEY);
         let deviceFriendlyName = localStorage.getItem(DEVICE_FRIENDLY_NAME_STORAGE_KEY) || '';
+        let operatorName = localStorage.getItem(OPERATOR_NAME_STORAGE_KEY) || '';
         let eventId = getOrCreateStorageUuid(EVENT_ID_STORAGE_KEY);
         let retroCart = [];
         let retroSelectedArticleId = '';
@@ -2072,7 +2113,12 @@
                 locatie: document.getElementById('ev_locatie').value,
                 datum: document.getElementById('ev_datum').value
             };
+            deviceFriendlyName = document.getElementById('ev_device_name').value.trim();
+            operatorName = document.getElementById('ev_operator_name').value.trim();
             localStorage.setItem('kassa_event', JSON.stringify(eventInfo));
+            localStorage.setItem(DEVICE_FRIENDLY_NAME_STORAGE_KEY, deviceFriendlyName);
+            localStorage.setItem(OPERATOR_NAME_STORAGE_KEY, operatorName);
+            renderTerminalIdentity();
             renderTicketsModule();
             showMessage('✅ Event info opgeslagen!', 'success');
         }
@@ -2081,7 +2127,28 @@
             document.getElementById('ev_naam').value = eventInfo.naam || '';
             document.getElementById('ev_locatie').value = eventInfo.locatie || '';
             document.getElementById('ev_datum').value = eventInfo.datum || '';
+            document.getElementById('ev_device_name').value = deviceFriendlyName || '';
+            document.getElementById('ev_operator_name').value = operatorName || '';
+            renderTerminalIdentity();
             renderTicketsModule();
+        }
+
+        function renderTerminalIdentity() {
+            const deviceEl = document.getElementById('header_device_name');
+            const operatorEl = document.getElementById('header_operator_name');
+            const deviceLabel = deviceFriendlyName || localStorage.getItem(DEVICE_FRIENDLY_NAME_STORAGE_KEY) || '';
+            const operatorLabel = operatorName || localStorage.getItem(OPERATOR_NAME_STORAGE_KEY) || '';
+
+            if (deviceEl) {
+                deviceEl.textContent = deviceLabel ? `📍 ${deviceLabel}` : '📍 Kassapunt ontbreekt';
+                deviceEl.title = deviceLabel ? `Kassapunt: ${deviceLabel}` : 'Kassapunt / tabletnaam ontbreekt';
+                deviceEl.style.background = deviceLabel ? 'rgba(255,255,255,0.18)' : 'rgba(255,193,7,0.32)';
+            }
+            if (operatorEl) {
+                operatorEl.textContent = operatorLabel ? `👤 ${operatorLabel}` : '👤 Gebruiker ontbreekt';
+                operatorEl.title = operatorLabel ? `Gebruiker: ${operatorLabel}` : 'Gebruiker / verantwoordelijke ontbreekt';
+                operatorEl.style.background = operatorLabel ? 'rgba(255,255,255,0.18)' : 'rgba(255,193,7,0.32)';
+            }
         }
 
         // ========== EXTERNAL TICKETS ==========
@@ -4026,6 +4093,9 @@
                     deviceId: deviceId,
                     friendlyName: localStorage.getItem(DEVICE_FRIENDLY_NAME_STORAGE_KEY) || ''
                 },
+                operator: {
+                    name: localStorage.getItem(OPERATOR_NAME_STORAGE_KEY) || ''
+                },
                 event: {
                     eventId: eventId,
                     name: eventInfo.naam || '',
@@ -4135,6 +4205,14 @@
             return false;
         }
 
+        function confirmExportIdentityIfMissing() {
+            const missing = [];
+            if (!(localStorage.getItem(DEVICE_FRIENDLY_NAME_STORAGE_KEY) || '').trim()) missing.push('kassapunt/tabletnaam');
+            if (!(localStorage.getItem(OPERATOR_NAME_STORAGE_KEY) || '').trim()) missing.push('gebruiker/verantwoordelijke');
+            if (!missing.length) return true;
+            return confirm(`⚠️ ${missing.join(' en ')} ontbreekt.\n\nDe Hoofdapp kan deze export later minder duidelijk tonen.\n\nToch exporteren?`);
+        }
+
         function buildKassaExportFileName() {
             const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14);
             return `kassa-export-${eventId}-${deviceId}-${timestamp}.json`;
@@ -4142,6 +4220,7 @@
 
         async function exportKassaToGoogleDrive() {
             if (!canExportClosedCashSession()) return;
+            if (!confirmExportIdentityIfMissing()) return;
             if (AppState.exportBusy) return;
 
             if (!kassaGDriveIsTokenValid()) {
@@ -4178,6 +4257,7 @@
 
         function downloadJSON() {
             if (!canExportClosedCashSession()) return;
+            if (!confirmExportIdentityIfMissing()) return;
             migrateExportContractData();
             const data = buildKassaExport();
 

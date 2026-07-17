@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.3
+- Kassapunt/tabletnaam en gebruiker/verantwoordelijke toegevoegd aan de Event-tab.
+- Kassapunt en gebruiker worden zichtbaar getoond in de header naast de versie en vóór de KASSA-knop.
+- Kassa-export bevat nu een apart `operator`-blok en blijft `device.friendlyName` meesturen.
+- Export waarschuwt wanneer kassapunt of gebruiker ontbreekt, maar blokkeert niet.
+- Reset wist kassapunt en gebruiker niet, zodat tabletidentificatie bewaard blijft.
+- Geen wijziging aan transacties, prijslijst, tickets, kasstand, Google Drive-prijslijstimport of het officiële schemaName/schemaVersion.
+
 ## 1.4.2
 - ManiFiesta-tab verbreed naar een algemene `Tickets`-tab.
 - ManiFiesta-registratie blijft alleen beschikbaar voor evenementen vóór 1 september.
