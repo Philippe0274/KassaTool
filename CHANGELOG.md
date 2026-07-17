@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.1
+- Sync-statuslaag voor tabletgebruik toegevoegd: Prijslijst toont nu actief/inactief, event-lock en offline-klaarstatus.
+- Retro-kassa waarschuwt wanneer er nog geen officiële Hoofdapp-prijslijst lokaal geladen is, zonder verkoop te blokkeren.
+- Tabletwijzigingen aan de prijslijst worden lokaal gemarkeerd: nieuwe artikelen, prijswijzigingen, naamwijzigingen en actief/inactief-wijzigingen.
+- Geïmporteerde Hoofdapp-artikelen bewaren nu beginnaam, beginprijs en beginstatus als referentie voor de latere eindprijslijst.
+- Kassa-export bevat extra backward compatible metadata voor tabletwijzigingen en officiële artikelkoppeling.
+- Geen transacties-upload, Google Drive upload van eindprijslijst, Hoofdapp-import, ledger of financiële verwerking toegevoegd.
+
 ## 1.3.0
 - Google Drive Sync fase 2B toegevoegd: de Kassa Tool kan de officiële beginprijslijst ophalen uit `EventToolSync`.
 - Nieuw sync-paneel in het tabblad Prijslijst met verbinden, sync-test en `Prijslijst ophalen`.

@@ -991,6 +991,18 @@
                                     <div class="sync-meta-label">Artikelen</div>
                                     <div class="sync-meta-value" id="gdrive_pricelist_count">0</div>
                                 </div>
+                                <div class="sync-meta-card">
+                                    <div class="sync-meta-label">Actief / inactief</div>
+                                    <div class="sync-meta-value" id="gdrive_pricelist_active_count">0 / 0</div>
+                                </div>
+                                <div class="sync-meta-card">
+                                    <div class="sync-meta-label">Event-lock</div>
+                                    <div class="sync-meta-value" id="gdrive_event_lock_status">Nog vrij</div>
+                                </div>
+                                <div class="sync-meta-card">
+                                    <div class="sync-meta-label">Offline status</div>
+                                    <div class="sync-meta-value" id="gdrive_offline_ready_status">Niet klaar</div>
+                                </div>
                             </div>
                             <div class="sync-message" id="gdrive_sync_message">Nog geen officiële prijslijst uit Google Drive geladen.</div>
                         </div>
@@ -1350,7 +1362,7 @@
     <script>
         // Data
         const AppState = {
-            version: "1.3.0",
+            version: "1.3.1",
             safeToReload: true,
             transactionOpen: false,
             exportBusy: false,
@@ -1605,22 +1617,59 @@
             localStorage.setItem(KASSA_PRICELIST_SYNC_META_KEY, JSON.stringify(meta || {}));
         }
 
+        function hasOfficialPriceListLoaded() {
+            const meta = readKassaPriceListSyncMeta();
+            return !!meta.loadedAt && !!meta.eventId && Array.isArray(prijslijst) && prijslijst.some(article => article && article.officialSource === 'hoofdapp-google-drive');
+        }
+
+        function currentPriceListStats() {
+            const articles = Array.isArray(prijslijst) ? prijslijst : [];
+            const active = articles.filter(article => article && article.actief !== false).length;
+            return {
+                total: articles.length,
+                active,
+                inactive: articles.length - active,
+                tabletChanges: articles.filter(article => article && (article.createdOnTablet || article.priceChangedOnTablet || article.statusChangedOnTablet)).length
+            };
+        }
+
+        function markArticleTabletChange(article, patch) {
+            if (!article) return;
+            Object.assign(article, patch, {
+                changedOnTablet: true,
+                changedAt: new Date().toISOString(),
+                changedByDeviceId: deviceId
+            });
+        }
+
         function renderKassaDriveSyncStatus(message) {
             const badge = document.getElementById('gdrive_status_badge');
             const last = document.getElementById('gdrive_last_pricelist_sync');
             const eventLabel = document.getElementById('gdrive_pricelist_event');
             const count = document.getElementById('gdrive_pricelist_count');
+            const activeCount = document.getElementById('gdrive_pricelist_active_count');
+            const lockStatus = document.getElementById('gdrive_event_lock_status');
+            const offlineReady = document.getElementById('gdrive_offline_ready_status');
             const messageBox = document.getElementById('gdrive_sync_message');
             if (!badge || !last || !eventLabel || !count || !messageBox) return;
 
             const connected = kassaGDriveIsTokenValid();
             const meta = readKassaPriceListSyncMeta();
+            const stats = currentPriceListStats();
+            const officialLoaded = hasOfficialPriceListLoaded();
+            const locked = kassabewegingen.length > 0;
             badge.className = `sync-badge ${connected ? 'ok' : 'warn'}`;
             badge.textContent = connected ? 'Verbonden' : (kassaGDriveWantsConnection() ? 'Herverbinden mogelijk' : 'Niet verbonden');
             last.textContent = meta.loadedAt ? new Date(meta.loadedAt).toLocaleString('nl-BE') : 'Nog nooit';
             eventLabel.textContent = meta.eventName || eventInfo.naam || '-';
-            count.textContent = Number.isFinite(Number(meta.articleCount)) ? String(meta.articleCount) : String((prijslijst || []).length);
-            messageBox.textContent = message || localStorage.getItem('kassatool_gdrive_last_error') || (meta.loadedAt ? 'Officiële prijslijst is lokaal beschikbaar op deze tablet.' : 'Nog geen officiële prijslijst uit Google Drive geladen.');
+            count.textContent = String(stats.total);
+            if (activeCount) activeCount.textContent = `${stats.active} / ${stats.inactive}`;
+            if (lockStatus) lockStatus.textContent = locked ? `Vergrendeld (${kassabewegingen.length} transacties)` : 'Nog vrij';
+            if (offlineReady) offlineReady.textContent = officialLoaded ? 'Klaar voor offline gebruik' : 'Officiële prijslijst ontbreekt';
+            const defaultMessage = officialLoaded
+                ? `Officiële prijslijst is lokaal beschikbaar op deze tablet.${stats.tabletChanges ? ` Tabletwijzigingen: ${stats.tabletChanges}.` : ''}`
+                : 'Nog geen officiële prijslijst uit Google Drive geladen.';
+            messageBox.textContent = message || localStorage.getItem('kassatool_gdrive_last_error') || defaultMessage;
         }
 
         function validateOfficialPriceListPayload(payload) {
@@ -1659,6 +1708,9 @@
                     categorie: String(article.categoryName || '').trim(),
                     artikelNummer: String(article.articleNumber || '').trim(),
                     volgorde: Number.isFinite(Number(article.sortOrder)) ? Number(article.sortOrder) : index,
+                    officialStartName: String(article.name || '').trim(),
+                    officialStartPrice: Number(article.price && article.price.amount),
+                    officialStartActive: article.active !== false,
                     officialSource: 'hoofdapp-google-drive',
                     officialEventId: payload.eventId,
                     officialImportedAt: new Date().toISOString()
@@ -1699,6 +1751,7 @@
                 };
                 localStorage.setItem('kassa_event', JSON.stringify(eventInfo));
                 savePrijslijst();
+                localStorage.removeItem('kassatool_gdrive_last_error');
                 writeKassaPriceListSyncMeta({
                     loadedAt: new Date().toISOString(),
                     schemaName: payload.schemaName,
@@ -2100,7 +2153,11 @@
                 id: createUuid(),
                 naam: naam,
                 prijs: prijs,
-                actief: true
+                actief: true,
+                createdOnTablet: true,
+                createdAt: new Date().toISOString(),
+                createdByDeviceId: deviceId,
+                officialEventId: eventId
             });
 
             savePrijslijst();
@@ -2108,6 +2165,7 @@
             document.getElementById('pl_prijs').value = '';
             renderPrijslijst();
             updateArtikelSelects();
+            renderKassaDriveSyncStatus();
             showMessage('✅ Artikel toegevoegd!', 'success');
         }
 
@@ -2118,16 +2176,18 @@
             savePrijslijst();
             renderPrijslijst();
             updateArtikelSelects();
+            renderKassaDriveSyncStatus();
         }
 
         function renderPrijslijst() {
             const tbody = document.querySelector('#prijslijst_table tbody');
             tbody.innerHTML = prijslijst.map(a => {
                 const actief = a.actief !== false;
+                const wijziging = a.createdOnTablet ? 'Nieuw op tablet' : (a.priceChangedOnTablet ? 'Prijs gewijzigd' : (a.statusChangedOnTablet ? 'Status gewijzigd' : ''));
                 return `
                     <tr>
-                        <td>${a.naam}</td>
-                        <td>€${a.prijs.toFixed(2)}</td>
+                        <td>${escapeHtml(a.naam)}${wijziging ? `<div style="font-size:0.75em;color:#8a5a13;font-weight:700;">${escapeHtml(wijziging)}</div>` : ''}</td>
+                        <td>€${toNumber(a.prijs, 0).toFixed(2)}</td>
                         <td>
                             <button class="btn ${actief ? 'btn-success' : 'btn-info'} btn-sm" onclick="toggleArtikelActief('${a.id}')">${actief ? '🟢 Actief' : '⚪ Inactief'}</button>
                         </td>
@@ -2144,10 +2204,17 @@
             const artikel = prijslijst.find(a => a.id === id);
             if (!artikel) return;
 
+            const previousActive = artikel.actief !== false;
             artikel.actief = artikel.actief === false;
+            markArticleTabletChange(artikel, {
+                statusChangedOnTablet: true,
+                previousActive,
+                newActive: artikel.actief !== false
+            });
             savePrijslijst();
             renderPrijslijst();
             updateArtikelSelects();
+            renderKassaDriveSyncStatus();
             showMessage(`Artikel ${artikel.actief ? 'actief' : 'inactief'} gezet!`, 'success');
         }
 
@@ -2167,12 +2234,29 @@
                 return;
             }
 
+            const oldName = artikel.naam;
+            const oldPrice = toNumber(artikel.prijs, 0);
             artikel.naam = newNaam.trim();
             artikel.prijs = newPrijs;
+            if (oldName !== artikel.naam) {
+                markArticleTabletChange(artikel, {
+                    nameChangedOnTablet: true,
+                    previousName: oldName,
+                    newName: artikel.naam
+                });
+            }
+            if (Math.abs(oldPrice - newPrijs) >= 0.005) {
+                markArticleTabletChange(artikel, {
+                    priceChangedOnTablet: true,
+                    previousPrice: oldPrice,
+                    newPrice: newPrijs
+                });
+            }
 
             savePrijslijst();
             renderPrijslijst();
             updateArtikelSelects();
+            renderKassaDriveSyncStatus();
             showMessage('✅ Artikel gewijzigd!', 'success');
         }
 
@@ -2620,6 +2704,7 @@
             resetKasTransactieForm();
             renderKassabewegingen();
             updateKasstand();
+            renderKassaDriveSyncStatus();
             showMessage(isBewerking ? '✅ Transactie gewijzigd!' : '✅ Transactie opgeslagen!', 'success');
         }
 
@@ -2633,6 +2718,7 @@
             localStorage.setItem('kassa_kassabewegingen', JSON.stringify(kassabewegingen));
             renderKassabewegingen();
             updateKasstand();
+            renderKassaDriveSyncStatus();
         }
 
         function editKasTransactie(id) {
@@ -2852,6 +2938,9 @@
             if (retroActiveArticles().length === 0) {
                 showMessage('⚠️ Voeg eerst actieve artikelen toe aan de prijslijst.', 'error');
                 return;
+            }
+            if (!hasOfficialPriceListLoaded()) {
+                showMessage('⚠️ Er is nog geen officiële Hoofdapp-prijslijst geladen. Controleer dit vóór het evenement.', 'warning');
             }
             retroCart = [];
             retroSelectedArticleId = '';
@@ -3477,7 +3566,16 @@
                             categoryName: artikel.categorie || '',
                             name: artikel.naam || '',
                             priceCents: toCents(artikel.prijs),
-                            active: artikel.actief !== false
+                            active: artikel.actief !== false,
+                            officialStartName: artikel.officialStartName || null,
+                            officialStartPriceCents: artikel.officialStartPrice !== undefined ? toCents(artikel.officialStartPrice) : null,
+                            officialStartActive: artikel.officialStartActive !== undefined ? !!artikel.officialStartActive : null,
+                            createdOnTablet: !!artikel.createdOnTablet,
+                            priceChangedOnTablet: !!artikel.priceChangedOnTablet,
+                            statusChangedOnTablet: !!artikel.statusChangedOnTablet,
+                            nameChangedOnTablet: !!artikel.nameChangedOnTablet,
+                            changedAt: artikel.changedAt || null,
+                            changedByDeviceId: artikel.changedByDeviceId || null
                         }))
                     },
                     openingCash: {
