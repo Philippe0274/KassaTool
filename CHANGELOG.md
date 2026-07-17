@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.4.2
+- ManiFiesta-tab verbreed naar een algemene `Tickets`-tab.
+- ManiFiesta-registratie blijft alleen beschikbaar voor evenementen vóór 1 september.
+- Externe ticketregistraties toegevoegd voor boekvoorstellingen en andere externe events.
+- Externe tickets bewaren eventnaam, eventdatum, registratietijd, aantal, opmerking, eventId en deviceId.
+- Kassa-export bevat nu backward compatible `data.externalTicketRegistrations` en integriteitsmetadata voor externe ticketaantallen.
+- Externe tickets hebben geen invloed op kassaldo, omzet, betaalmethodes, prijslijst, cash/kaart of transactielogica.
+- Geen wijziging aan retro-kassa, financiële transacties, Google Drive-prijslijstimport of het officiële schemaName/schemaVersion.
+
+## 1.4.1
+- Niet-financiële ManiFiesta-ticketregistratie toegevoegd voor evenementen vóór 1 september.
+- Nieuwe ManiFiesta-tab wordt automatisch verborgen wanneer het evenement op of na 1 september valt.
+- ManiFiesta-registraties bewaren losse regels met tijd, aantal, opmerking, eventId en deviceId.
+- Kassa-export bevat nu backward compatible `data.manifestaTicketRegistrations` en integriteitsmetadata voor aantallen.
+- ManiFiesta-tickets hebben geen invloed op kassaldo, omzet, betaalmethodes, prijslijst, cash/kaart of transactielogica.
+- Geen wijziging aan retro-kassa, financiële transacties, Google Drive-prijslijstimport of het officiële schemaName/schemaVersion.
+
 ## 1.4.0
 - Kassa-lifecycle toegevoegd: open, afgesloten en heropend.
 - Exportknoppen zijn pas zichtbaar en bruikbaar nadat de kassa afgesloten is.

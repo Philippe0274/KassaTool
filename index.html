@@ -854,7 +854,7 @@
                 </svg>
                 <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
                     <h1 style="white-space: nowrap;">💳 Kassa Tool</h1>
-                    <span id="app_version_badge" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);border-radius:999px;padding:4px 9px;font-size:0.78em;font-weight:800;">v1.4.0</span>
+                    <span id="app_version_badge" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);border-radius:999px;padding:4px 9px;font-size:0.78em;font-weight:800;">v1.4.2</span>
                 </div>
             </div>
             <div class="app-header-actions">
@@ -873,6 +873,7 @@
                 <button class="tab-btn" onclick="switchTab('personen')">👥 Personen</button>
                 <button class="tab-btn" onclick="switchTab('prijslijst')">📋 Prijslijst</button>
                 <button class="tab-btn" onclick="switchTab('kassabewegingen')">💳 Kassa</button>
+                <button id="tickets_tab_btn" class="tab-btn" onclick="switchTab('tickets')">🎟️ Tickets</button>
             </div>
 
             <!-- Content -->
@@ -1171,6 +1172,98 @@
                         <button class="btn btn-danger" style="width: 100%; padding: 15px; font-size: 1em;" onclick="showPreview('close')">🔒 AFSLUITEN KASSA</button>
                     </div>
                 </div>
+
+                <!-- TICKETS Tab -->
+                <div id="tickets" class="tab-content">
+                    <div class="section">
+                        <h2>🎟️ Externe tickets</h2>
+                        <p style="color:#666;font-size:0.95em;line-height:1.5;">
+                            Registreer hier alleen aantallen tickets die extern betaald of afgehandeld worden, zoals ManiFiesta, boekvoorstellingen of andere externe events.
+                            Dit is geen kassa-omzet en heeft geen invloed op cash, kaart, kasstand of rapporttotalen.
+                        </p>
+
+                        <div id="manifiesta_entry_panel" style="border:1px solid #ead7bd;border-radius:10px;background:#fffaf2;padding:14px;margin:18px 0;">
+                            <h3 style="margin-top:0;">🎪 ManiFiesta tickets</h3>
+                            <div id="manifiesta_unavailable" class="info-box" style="display:none;background:#fff3cd;border-color:#f0ad4e;color:#664d03;">
+                                ManiFiesta-registratie is alleen beschikbaar voor evenementen vóór 1 september.
+                            </div>
+                            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:18px 0;">
+                                <div style="background:#fffbf0;border:1px solid #ead7bd;border-radius:10px;padding:14px;">
+                                    <div style="font-size:0.85em;color:#6b5a44;font-weight:700;">ManiFiesta totaal</div>
+                                    <div id="manifiesta_total" style="font-size:2em;font-weight:900;color:#c8442a;">0</div>
+                                </div>
+                                <div style="background:#fffbf0;border:1px solid #ead7bd;border-radius:10px;padding:14px;">
+                                    <div style="font-size:0.85em;color:#6b5a44;font-weight:700;">ManiFiesta registraties</div>
+                                    <div id="manifiesta_count" style="font-size:2em;font-weight:900;color:#5b351e;">0</div>
+                                </div>
+                            </div>
+
+                            <h3>➕ Registratie toevoegen</h3>
+                            <div class="form-row">
+                                <div>
+                                    <label>⏰ Uur</label>
+                                    <input type="time" id="mf_time" onfocus="setCurrentManifiestaTime()">
+                                </div>
+                                <div>
+                                    <label>🎟️ Aantal tickets</label>
+                                    <input type="number" id="mf_quantity" min="1" step="1" inputmode="numeric" value="1">
+                                </div>
+                            </div>
+                            <div class="form-row full">
+                                <label>📝 Opmerking (optioneel)</label>
+                                <textarea id="mf_note" rows="2" placeholder="Bijv. naam koper, groep, extra info"></textarea>
+                            </div>
+                            <button class="btn btn-primary" onclick="addManifiestaRegistration()">➕ Registratie toevoegen</button>
+
+                            <h3 style="margin-top:30px;">Registraties</h3>
+                            <div id="manifiesta_list"></div>
+                        </div>
+
+                        <div id="external_ticket_entry_panel" style="border:1px solid #d8d8d8;border-radius:10px;background:#fff;padding:14px;margin:18px 0;">
+                            <h3 style="margin-top:0;">🎟️ Andere externe tickets</h3>
+                            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:18px 0;">
+                                <div style="background:#fffbf0;border:1px solid #ead7bd;border-radius:10px;padding:14px;">
+                                    <div style="font-size:0.85em;color:#6b5a44;font-weight:700;">Externe tickets totaal</div>
+                                    <div id="external_ticket_total" style="font-size:2em;font-weight:900;color:#c8442a;">0</div>
+                                </div>
+                                <div style="background:#fffbf0;border:1px solid #ead7bd;border-radius:10px;padding:14px;">
+                                    <div style="font-size:0.85em;color:#6b5a44;font-weight:700;">Externe registraties</div>
+                                    <div id="external_ticket_count" style="font-size:2em;font-weight:900;color:#5b351e;">0</div>
+                                </div>
+                            </div>
+
+                            <h3>➕ Externe ticketregistratie toevoegen</h3>
+                            <div class="form-row">
+                                <div>
+                                    <label>Naam extern event</label>
+                                    <input type="text" id="xt_event_name" placeholder="Bijv. Boekvoorstelling">
+                                </div>
+                                <div>
+                                    <label>Datum extern event</label>
+                                    <input type="date" id="xt_event_date">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div>
+                                    <label>⏰ Uur registratie</label>
+                                    <input type="time" id="xt_time" onfocus="setCurrentExternalTicketTime()">
+                                </div>
+                                <div>
+                                    <label>🎟️ Aantal tickets</label>
+                                    <input type="number" id="xt_quantity" min="1" step="1" inputmode="numeric" value="1">
+                                </div>
+                            </div>
+                            <div class="form-row full">
+                                <label>📝 Opmerking (optioneel)</label>
+                                <textarea id="xt_note" rows="2" placeholder="Bijv. naam koper, groep, extra info"></textarea>
+                            </div>
+                            <button class="btn btn-primary" onclick="addExternalTicketRegistration()">➕ Externe tickets registreren</button>
+
+                            <h3 style="margin-top:30px;">Externe ticketregistraties</h3>
+                            <div id="external_ticket_list"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1386,7 +1479,7 @@
     <script>
         // Data
         const AppState = {
-            version: "1.4.0",
+            version: "1.4.2",
             safeToReload: true,
             transactionOpen: false,
             exportBusy: false,
@@ -1404,6 +1497,8 @@
         const DEVICE_FRIENDLY_NAME_STORAGE_KEY = 'kassa_device_friendly_name';
         const EVENT_ID_STORAGE_KEY = 'kassa_event_id';
         const CASH_SESSION_STORAGE_KEY = 'kassa_cash_session';
+        const MANIFIESTA_STORAGE_KEY = 'kassa_manifiesta_tickets';
+        const EXTERNAL_TICKETS_STORAGE_KEY = 'kassa_external_tickets';
         const KASSA_GDRIVE_CLIENT_ID = '333079195698-gt6gm0ra37e53ujd782424nea5e9iiqq.apps.googleusercontent.com';
         const KASSA_GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile';
         const KASSA_GDRIVE_ACCOUNT_HINT = 'philippe.demeersman1970@gmail.com';
@@ -1425,6 +1520,8 @@
         let personen = JSON.parse(localStorage.getItem('kassa_personen')) || [];
         let prijslijst = loadPermanentePrijslijst();
         let kassabewegingen = JSON.parse(localStorage.getItem('kassa_kassabewegingen')) || [];
+        let manifiestaRegistrations = JSON.parse(localStorage.getItem(MANIFIESTA_STORAGE_KEY)) || [];
+        let externalTicketRegistrations = JSON.parse(localStorage.getItem(EXTERNAL_TICKETS_STORAGE_KEY)) || [];
         let startbedrag = JSON.parse(localStorage.getItem('kassa_startbedrag')) || { bedrag: 0, oorsprong: '', persoon_id: '', persoon_naam: '' };
         let bewerkingTransactieId = null;
         let deviceId = getOrCreateStorageUuid(DEVICE_ID_STORAGE_KEY);
@@ -1939,6 +2036,7 @@
                 renderPrijslijst();
                 updateArtikelSelects();
                 renderRetroKassa();
+                renderTicketsModule();
                 renderKassaDriveSyncStatus('✓ Officiële prijslijst geladen en offline opgeslagen.');
                 showMessage(`✅ Officiële prijslijst geladen: ${importedPriceList.length} artikelen.`, 'success');
             } catch (error) {
@@ -1962,6 +2060,8 @@
                 updateArtikelSelects();
                 renderKassabewegingen();
                 updateKasstand();
+            } else if (tab === 'tickets') {
+                renderTicketsModule();
             }
         }
 
@@ -1973,6 +2073,7 @@
                 datum: document.getElementById('ev_datum').value
             };
             localStorage.setItem('kassa_event', JSON.stringify(eventInfo));
+            renderTicketsModule();
             showMessage('✅ Event info opgeslagen!', 'success');
         }
 
@@ -1980,6 +2081,203 @@
             document.getElementById('ev_naam').value = eventInfo.naam || '';
             document.getElementById('ev_locatie').value = eventInfo.locatie || '';
             document.getElementById('ev_datum').value = eventInfo.datum || '';
+            renderTicketsModule();
+        }
+
+        // ========== EXTERNAL TICKETS ==========
+        function isEventBeforeSeptember() {
+            if (!eventInfo.datum) return false;
+            const date = new Date(`${eventInfo.datum}T00:00:00`);
+            if (Number.isNaN(date.getTime())) return false;
+            const septemberFirst = new Date(date.getFullYear(), 8, 1);
+            return date < septemberFirst;
+        }
+
+        function saveManifiestaRegistrations() {
+            localStorage.setItem(MANIFIESTA_STORAGE_KEY, JSON.stringify(manifiestaRegistrations));
+        }
+
+        function saveExternalTicketRegistrations() {
+            localStorage.setItem(EXTERNAL_TICKETS_STORAGE_KEY, JSON.stringify(externalTicketRegistrations));
+        }
+
+        function manifiestaTotalTickets() {
+            return manifiestaRegistrations.reduce((sum, item) => sum + (parseInt(item.quantity, 10) || 0), 0);
+        }
+
+        function externalTicketTotalTickets() {
+            return externalTicketRegistrations.reduce((sum, item) => sum + (parseInt(item.quantity, 10) || 0), 0);
+        }
+
+        function setCurrentManifiestaTime() {
+            const input = document.getElementById('mf_time');
+            if (input && !input.value) {
+                const now = new Date();
+                input.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            }
+        }
+
+        function setCurrentExternalTicketTime() {
+            const input = document.getElementById('xt_time');
+            if (input && !input.value) {
+                const now = new Date();
+                input.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            }
+        }
+
+        function renderTicketsModule() {
+            const allowed = isEventBeforeSeptember();
+
+            const unavailable = document.getElementById('manifiesta_unavailable');
+            if (unavailable) unavailable.style.display = allowed ? 'none' : 'block';
+
+            const panel = document.getElementById('manifiesta_entry_panel');
+            if (panel) panel.style.opacity = allowed ? '1' : '0.78';
+
+            const total = document.getElementById('manifiesta_total');
+            if (total) total.textContent = String(manifiestaTotalTickets());
+
+            const count = document.getElementById('manifiesta_count');
+            if (count) count.textContent = String(manifiestaRegistrations.length);
+
+            const list = document.getElementById('manifiesta_list');
+            if (list) {
+                if (manifiestaRegistrations.length === 0) {
+                    list.innerHTML = '<p style="color:#999;">Nog geen ManiFiesta-registraties.</p>';
+                } else {
+                    list.innerHTML = manifiestaRegistrations.map(item => `
+                        <div style="display:grid;grid-template-columns:90px 1fr auto auto;gap:10px;align-items:center;border:1px solid #ead7bd;border-radius:8px;background:#fffaf2;padding:10px;margin-bottom:8px;">
+                            <strong>${escapeHtml(item.time || '--:--')}</strong>
+                            <div>
+                                <div><strong>${item.quantity}</strong> ticket${item.quantity === 1 ? '' : 's'}</div>
+                                ${item.note ? `<div style="color:#666;font-size:0.9em;">${escapeHtml(item.note)}</div>` : ''}
+                            </div>
+                            <span style="color:#777;font-size:0.85em;">${formatSessionDate(item.createdAt)}</span>
+                            <button class="btn btn-danger btn-sm" onclick="removeManifiestaRegistration('${item.registrationId}')">🗑️</button>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            const externalTotal = document.getElementById('external_ticket_total');
+            if (externalTotal) externalTotal.textContent = String(externalTicketTotalTickets());
+
+            const externalCount = document.getElementById('external_ticket_count');
+            if (externalCount) externalCount.textContent = String(externalTicketRegistrations.length);
+
+            const externalList = document.getElementById('external_ticket_list');
+            if (externalList) {
+                if (externalTicketRegistrations.length === 0) {
+                    externalList.innerHTML = '<p style="color:#999;">Nog geen externe ticketregistraties.</p>';
+                } else {
+                    externalList.innerHTML = externalTicketRegistrations.map(item => `
+                        <div style="display:grid;grid-template-columns:1fr 120px 80px auto auto;gap:10px;align-items:center;border:1px solid #ddd;border-radius:8px;background:#fffaf2;padding:10px;margin-bottom:8px;">
+                            <div>
+                                <strong>${escapeHtml(item.externalEventName || 'Extern event')}</strong>
+                                <div style="color:#666;font-size:0.9em;">Datum event: ${escapeHtml(item.externalEventDate || '-')}</div>
+                                ${item.note ? `<div style="color:#666;font-size:0.9em;">${escapeHtml(item.note)}</div>` : ''}
+                            </div>
+                            <span>${escapeHtml(item.time || '--:--')}</span>
+                            <strong>${item.quantity}</strong>
+                            <span style="color:#777;font-size:0.85em;">${formatSessionDate(item.createdAt)}</span>
+                            <button class="btn btn-danger btn-sm" onclick="removeExternalTicketRegistration('${item.registrationId}')">🗑️</button>
+                        </div>
+                    `).join('');
+                }
+            }
+        }
+
+        function addManifiestaRegistration() {
+            if (!isEventBeforeSeptember()) {
+                showMessage('⚠️ ManiFiesta-registratie is alleen beschikbaar vóór september.', 'warning');
+                return;
+            }
+
+            const time = document.getElementById('mf_time').value || new Date().toTimeString().slice(0, 5);
+            const quantity = parseInt(document.getElementById('mf_quantity').value, 10);
+            const note = document.getElementById('mf_note').value.trim();
+
+            if (!Number.isInteger(quantity) || quantity <= 0) {
+                showMessage('⚠️ Voer een geldig aantal tickets in.', 'error');
+                return;
+            }
+
+            manifiestaRegistrations.push({
+                registrationId: createUuid(),
+                eventId: eventId,
+                deviceId: deviceId,
+                createdAt: new Date().toISOString(),
+                eventDate: getEventDate(),
+                time: time,
+                quantity: quantity,
+                note: note
+            });
+
+            saveManifiestaRegistrations();
+            document.getElementById('mf_time').value = '';
+            document.getElementById('mf_quantity').value = '1';
+            document.getElementById('mf_note').value = '';
+            renderTicketsModule();
+            showMessage('✅ ManiFiesta-registratie opgeslagen.', 'success');
+        }
+
+        function removeManifiestaRegistration(id) {
+            if (!confirm('Deze ManiFiesta-registratie verwijderen?')) return;
+            manifiestaRegistrations = manifiestaRegistrations.filter(item => item.registrationId !== id);
+            saveManifiestaRegistrations();
+            renderTicketsModule();
+            showMessage('🗑️ ManiFiesta-registratie verwijderd.', 'success');
+        }
+
+        function addExternalTicketRegistration() {
+            const externalEventName = document.getElementById('xt_event_name').value.trim();
+            const externalEventDate = document.getElementById('xt_event_date').value;
+            const time = document.getElementById('xt_time').value || new Date().toTimeString().slice(0, 5);
+            const quantity = parseInt(document.getElementById('xt_quantity').value, 10);
+            const note = document.getElementById('xt_note').value.trim();
+
+            if (!externalEventName) {
+                showMessage('⚠️ Voer de naam van het externe event in.', 'error');
+                return;
+            }
+            if (!externalEventDate) {
+                showMessage('⚠️ Voer de datum van het externe event in.', 'error');
+                return;
+            }
+            if (!Number.isInteger(quantity) || quantity <= 0) {
+                showMessage('⚠️ Voer een geldig aantal tickets in.', 'error');
+                return;
+            }
+
+            externalTicketRegistrations.push({
+                registrationId: createUuid(),
+                eventId: eventId,
+                deviceId: deviceId,
+                createdAt: new Date().toISOString(),
+                sourceEventDate: getEventDate(),
+                time: time,
+                externalEventName: externalEventName,
+                externalEventDate: externalEventDate,
+                quantity: quantity,
+                note: note
+            });
+
+            saveExternalTicketRegistrations();
+            document.getElementById('xt_event_name').value = '';
+            document.getElementById('xt_event_date').value = '';
+            document.getElementById('xt_time').value = '';
+            document.getElementById('xt_quantity').value = '1';
+            document.getElementById('xt_note').value = '';
+            renderTicketsModule();
+            showMessage('✅ Externe ticketregistratie opgeslagen.', 'success');
+        }
+
+        function removeExternalTicketRegistration(id) {
+            if (!confirm('Deze externe ticketregistratie verwijderen?')) return;
+            externalTicketRegistrations = externalTicketRegistrations.filter(item => item.registrationId !== id);
+            saveExternalTicketRegistrations();
+            renderTicketsModule();
+            showMessage('🗑️ Externe ticketregistratie verwijderd.', 'success');
         }
 
         // ========== PERSONEN ==========
@@ -3785,10 +4083,40 @@
                         personId: isUuid(startbedrag.persoon_id) ? startbedrag.persoon_id : null,
                         personNameSnapshot: startbedrag.persoon_naam || ''
                     },
-                    transactions: transactions
+                    transactions: transactions,
+                    manifiestaTicketRegistrations: manifiestaRegistrations.map(item => ({
+                        registrationId: item.registrationId,
+                        eventId: item.eventId || eventId,
+                        deviceId: item.deviceId || deviceId,
+                        createdAt: item.createdAt || null,
+                        eventDate: item.eventDate || getEventDate(),
+                        time: item.time || '',
+                        quantity: parseInt(item.quantity, 10) || 0,
+                        note: item.note || '',
+                        financialImpact: 'none',
+                        paymentHandledExternally: true
+                    })),
+                    externalTicketRegistrations: externalTicketRegistrations.map(item => ({
+                        registrationId: item.registrationId,
+                        eventId: item.eventId || eventId,
+                        deviceId: item.deviceId || deviceId,
+                        createdAt: item.createdAt || null,
+                        sourceEventDate: item.sourceEventDate || getEventDate(),
+                        time: item.time || '',
+                        externalEventName: item.externalEventName || '',
+                        externalEventDate: item.externalEventDate || '',
+                        quantity: parseInt(item.quantity, 10) || 0,
+                        note: item.note || '',
+                        financialImpact: 'none',
+                        paymentHandledExternally: true
+                    }))
                 },
                 integrity: {
                     transactionCount: transactions.length,
+                    manifiestaTicketCount: manifiestaTotalTickets(),
+                    manifiestaRegistrationCount: manifiestaRegistrations.length,
+                    externalTicketCount: externalTicketTotalTickets(),
+                    externalTicketRegistrationCount: externalTicketRegistrations.length,
                     totalCashCents: totalCashCents,
                     totalCardCents: totalCardCents,
                     expectedCashDrawerCents: openingCashAmountCents + totalCashCents,
@@ -3866,10 +4194,14 @@
             if (confirm('⚠️ Dit wist eventgegevens en kassabewegingen!\n\n✅ Personen BLIJVEN behouden\n✅ Prijslijst BLIJFT behouden\n❌ Event\n❌ Kassabewegingen\n\nZeker?')) {
                 eventInfo = {};
                 kassabewegingen = [];
+                manifiestaRegistrations = [];
+                externalTicketRegistrations = [];
                 startbedrag = { bedrag: 0, oorsprong: '', persoon_id: '', persoon_naam: '' };
 
                 localStorage.removeItem('kassa_event');
                 localStorage.removeItem('kassa_kassabewegingen');
+                localStorage.removeItem(MANIFIESTA_STORAGE_KEY);
+                localStorage.removeItem(EXTERNAL_TICKETS_STORAGE_KEY);
                 localStorage.removeItem('kassa_startbedrag');
                 localStorage.removeItem(CASH_SESSION_STORAGE_KEY);
                 cashSession = defaultCashSession();
@@ -3879,6 +4211,7 @@
                 document.getElementById('artikelen_list').innerHTML = '';
                 updateScenarios();
                 renderKassabewegingen();
+                renderTicketsModule();
                 loadStartbedrag();
                 updateKasstand();
                 renderCashSessionStatus();
