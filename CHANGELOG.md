@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.4.0
+- Kassa-lifecycle toegevoegd: open, afgesloten en heropend.
+- Exportknoppen zijn pas zichtbaar en bruikbaar nadat de kassa afgesloten is.
+- Toegevoegd: kassa afsluiten, kassa heropenen en export naar Google Drive vanuit het kassastatusscherm.
+- Als de kassa te vroeg afgesloten werd, kan ze bewust heropend worden waarna transacties opnieuw ingevoerd kunnen worden.
+- Kassa-exportbestanden krijgen een unieke naam: `kassa-export-{eventId}-{deviceId}-{timestamp}.json`.
+- Exportpayload bevat backward compatible `cashSession`-metadata voor latere Hoofdapp-import en audit.
+- Geen wijziging aan transactiestructuur, retro-kassa, prijslijstimport, betaalscenario's of het officiële schemaName/schemaVersion.
+
 ## 1.3.3
 - Bugfix: `Status gewijzigd` verdwijnt nu correct wanneer een artikel teruggezet wordt naar zijn oorspronkelijke actief/inactief-status.
 - Voor oudere lokaal geladen prijslijsten zonder officiële beginstatus wordt vanaf de eerste statuswijziging een lokale baseline bewaard.

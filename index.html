@@ -854,13 +854,13 @@
                 </svg>
                 <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
                     <h1 style="white-space: nowrap;">💳 Kassa Tool</h1>
-                    <span id="app_version_badge" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);border-radius:999px;padding:4px 9px;font-size:0.78em;font-weight:800;">v1.3.3</span>
+                    <span id="app_version_badge" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);border-radius:999px;padding:4px 9px;font-size:0.78em;font-weight:800;">v1.4.0</span>
                 </div>
             </div>
             <div class="app-header-actions">
                 <button class="btn btn-info btn-sm" onclick="showKassaPopup()">💰 KASSA</button>
                 <button class="btn btn-primary btn-sm" onclick="showPreview('view')">👁️ PREVIEW</button>
-                <button class="btn btn-primary btn-sm" onclick="downloadJSON()">📥 EXPORT</button>
+                <button id="header_export_btn" class="btn btn-primary btn-sm" onclick="downloadJSON()" style="display:none;">📥 EXPORT</button>
                 <button class="btn btn-warning btn-sm" onclick="showLeegmakenDialog()">🗑️ RESET</button>
             </div>
         </div>
@@ -1250,6 +1250,24 @@
         <h3>💰 HUIDGE KASSTAND</h3>
         <div class="kasstand-value" id="popup_kasstand">€ 0,00</div>
         <p style="font-size: 0.9em; color: #666; margin: 10px 0 0 0;">Real-time berekend</p>
+        <div style="margin-top:18px;padding:14px;border:1px solid #e6d4bf;border-radius:10px;background:#fffaf2;text-align:left;">
+            <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px;">
+                <strong>Kassa status</strong>
+                <span id="cash_session_badge" style="border-radius:999px;padding:5px 10px;background:#dff0d8;color:#245b2b;font-weight:800;">Open</span>
+            </div>
+            <div style="font-size:0.9em;color:#6b5a44;line-height:1.5;">
+                <div>Transacties: <strong id="cash_session_transaction_count">0</strong></div>
+                <div>Afgesloten: <strong id="cash_session_closed_at">-</strong></div>
+                <div>Laatst heropend: <strong id="cash_session_reopened_at">-</strong></div>
+                <div>Laatst geëxporteerd: <strong id="cash_session_exported_at">-</strong></div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+                <button id="cash_session_close_btn" class="btn btn-warning btn-sm" onclick="closeCashSession()">🔒 Kassa afsluiten</button>
+                <button id="cash_session_reopen_btn" class="btn btn-info btn-sm" onclick="reopenCashSession()" style="display:none;">🔓 Kassa heropenen</button>
+                <button id="cash_session_drive_export_btn" class="btn btn-success btn-sm" onclick="exportKassaToGoogleDrive()" style="display:none;">☁️ Export naar Drive</button>
+                <button id="cash_session_json_export_btn" class="btn btn-primary btn-sm" onclick="downloadJSON()" style="display:none;">📥 JSON downloaden</button>
+            </div>
+        </div>
     </div>
 
     <!-- Preview Modal -->
@@ -1368,7 +1386,7 @@
     <script>
         // Data
         const AppState = {
-            version: "1.3.3",
+            version: "1.4.0",
             safeToReload: true,
             transactionOpen: false,
             exportBusy: false,
@@ -1385,6 +1403,7 @@
         const DEVICE_ID_STORAGE_KEY = 'kassa_device_id';
         const DEVICE_FRIENDLY_NAME_STORAGE_KEY = 'kassa_device_friendly_name';
         const EVENT_ID_STORAGE_KEY = 'kassa_event_id';
+        const CASH_SESSION_STORAGE_KEY = 'kassa_cash_session';
         const KASSA_GDRIVE_CLIENT_ID = '333079195698-gt6gm0ra37e53ujd782424nea5e9iiqq.apps.googleusercontent.com';
         const KASSA_GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile';
         const KASSA_GDRIVE_ACCOUNT_HINT = 'philippe.demeersman1970@gmail.com';
@@ -1418,9 +1437,126 @@
         let retroQtyBuffer = '';
         let retroScenario = 'exact';
         let retroPaidAmount = 0;
+        let cashSession = loadCashSession();
 
         ensureDeviceFriendlyName();
         migrateExportContractData();
+
+        function defaultCashSession() {
+            return {
+                status: 'open',
+                openedAt: new Date().toISOString(),
+                closedAt: null,
+                reopenedAt: null,
+                closeCount: 0,
+                reopenCount: 0,
+                exportCount: 0,
+                lastExportedAt: null,
+                lastExportFileName: ''
+            };
+        }
+
+        function loadCashSession() {
+            try {
+                const stored = JSON.parse(localStorage.getItem(CASH_SESSION_STORAGE_KEY) || 'null');
+                if (stored && typeof stored === 'object') {
+                    return { ...defaultCashSession(), ...stored };
+                }
+            } catch (error) {
+                console.warn('Cash session kon niet geladen worden:', error);
+            }
+            return defaultCashSession();
+        }
+
+        function saveCashSession() {
+            localStorage.setItem(CASH_SESSION_STORAGE_KEY, JSON.stringify(cashSession));
+        }
+
+        function formatSessionDate(value) {
+            if (!value) return '-';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return '-';
+            return date.toLocaleString('nl-BE', { dateStyle: 'short', timeStyle: 'short' });
+        }
+
+        function cashSessionLabel() {
+            if (cashSession.status === 'closed') return 'Afgesloten';
+            if (cashSession.status === 'reopened') return 'Heropend';
+            return 'Open';
+        }
+
+        function renderCashSessionStatus() {
+            const isClosed = cashSession.status === 'closed';
+            const badge = document.getElementById('cash_session_badge');
+            if (badge) {
+                badge.textContent = cashSessionLabel();
+                badge.style.background = isClosed ? '#f8d7da' : (cashSession.status === 'reopened' ? '#fff3cd' : '#dff0d8');
+                badge.style.color = isClosed ? '#842029' : (cashSession.status === 'reopened' ? '#664d03' : '#245b2b');
+            }
+
+            const count = document.getElementById('cash_session_transaction_count');
+            if (count) count.textContent = String(kassabewegingen.length);
+
+            const closedAt = document.getElementById('cash_session_closed_at');
+            if (closedAt) closedAt.textContent = formatSessionDate(cashSession.closedAt);
+
+            const reopenedAt = document.getElementById('cash_session_reopened_at');
+            if (reopenedAt) reopenedAt.textContent = formatSessionDate(cashSession.reopenedAt);
+
+            const exportedAt = document.getElementById('cash_session_exported_at');
+            if (exportedAt) exportedAt.textContent = formatSessionDate(cashSession.lastExportedAt);
+
+            const closeBtn = document.getElementById('cash_session_close_btn');
+            if (closeBtn) closeBtn.style.display = isClosed ? 'none' : '';
+
+            const reopenBtn = document.getElementById('cash_session_reopen_btn');
+            if (reopenBtn) reopenBtn.style.display = isClosed ? '' : 'none';
+
+            const driveExportBtn = document.getElementById('cash_session_drive_export_btn');
+            if (driveExportBtn) driveExportBtn.style.display = isClosed ? '' : 'none';
+
+            const jsonExportBtn = document.getElementById('cash_session_json_export_btn');
+            if (jsonExportBtn) jsonExportBtn.style.display = isClosed ? '' : 'none';
+
+            const headerExportBtn = document.getElementById('header_export_btn');
+            if (headerExportBtn) headerExportBtn.style.display = isClosed ? '' : 'none';
+        }
+
+        function ensureCashSessionAllowsTransaction() {
+            if (cashSession.status !== 'closed') return true;
+            showMessage('⚠️ Kassa is afgesloten. Heropen eerst de kassa om nog een transactie in te geven.', 'warning');
+            showKassaPopup();
+            return false;
+        }
+
+        function closeCashSession() {
+            if (cashSession.status === 'closed') return;
+            if (!confirm('Kassa afsluiten?\n\nNa afsluiten wordt export beschikbaar. Je kan later nog heropenen als er toch nog een verkoop bijkomt.')) return;
+            cashSession = {
+                ...cashSession,
+                status: 'closed',
+                closedAt: new Date().toISOString(),
+                closeCount: (cashSession.closeCount || 0) + 1,
+                transactionCountAtClose: kassabewegingen.length
+            };
+            saveCashSession();
+            renderCashSessionStatus();
+            showMessage('✅ Kassa afgesloten. Export is nu beschikbaar.', 'success');
+        }
+
+        function reopenCashSession() {
+            if (cashSession.status !== 'closed') return;
+            if (!confirm('Kassa heropenen?\n\nGebruik dit alleen wanneer er na afsluiting nog een transactie moet worden ingevoerd.')) return;
+            cashSession = {
+                ...cashSession,
+                status: 'reopened',
+                reopenedAt: new Date().toISOString(),
+                reopenCount: (cashSession.reopenCount || 0) + 1
+            };
+            saveCashSession();
+            renderCashSessionStatus();
+            showMessage('✅ Kassa heropend. Je kan opnieuw transacties ingeven.', 'success');
+        }
 
         // Init
         window.addEventListener('load', function() {
@@ -1436,6 +1572,7 @@
             loadStartbedrag();
             updateKasstand();
             updateScenarios();
+            renderCashSessionStatus();
         });
 
         // ========== GOOGLE DRIVE PRIJSLIJST SYNC ==========
@@ -2634,6 +2771,8 @@
         }
 
         function addKasTransactie() {
+            if (!ensureCashSessionAllowsTransaction()) return;
+
             const uur = document.getElementById('kb_uur').value;
             const betaling = document.getElementById('kb_betaling').value;
             const scenario = document.getElementById('kb_scenario').value;
@@ -2747,6 +2886,7 @@
             renderKassabewegingen();
             updateKasstand();
             renderKassaDriveSyncStatus();
+            renderCashSessionStatus();
             showMessage(isBewerking ? '✅ Transactie gewijzigd!' : '✅ Transactie opgeslagen!', 'success');
         }
 
@@ -2761,6 +2901,7 @@
             renderKassabewegingen();
             updateKasstand();
             renderKassaDriveSyncStatus();
+            renderCashSessionStatus();
         }
 
         function editKasTransactie(id) {
@@ -2973,6 +3114,8 @@
         }
 
         function openRetroKassa() {
+            if (!ensureCashSessionAllowsTransaction()) return;
+
             if (bewerkingTransactieId !== null) {
                 showMessage('⚠️ Rond eerst de actieve wijziging af of annuleer ze.', 'warning');
                 return;
@@ -3341,6 +3484,7 @@
 
         // ========== KASSA POPUP ==========
         function showKassaPopup() {
+            renderCashSessionStatus();
             document.getElementById('kassaPopup').classList.add('show');
         }
 
@@ -3558,6 +3702,7 @@
 
         function buildKassaExport() {
             const transactions = kassabewegingen.map(buildExportTransaction);
+            const exportedAt = new Date().toISOString();
             const openingCashAmountCents = toCents(startbedrag.bedrag);
             const totalCashCents = transactions.reduce((sum, transactie) => {
                 return sum + transactie.payment.cashReceivedCents - transactie.payment.cashChangeGivenCents;
@@ -3571,8 +3716,9 @@
                 schemaVersion: EXPORT_SCHEMA_VERSION,
                 export: {
                     exportId: createUuid(),
-                    exportedAt: new Date().toISOString(),
-                    exportType: 'full'
+                    exportedAt: exportedAt,
+                    exportType: 'full',
+                    cashSessionStatus: cashSession.status || 'open'
                 },
                 source: {
                     app: 'kassa-tool',
@@ -3589,6 +3735,19 @@
                     date: eventInfo.datum || '',
                     timezone: 'Europe/Brussels',
                     currency: 'EUR'
+                },
+                cashSession: {
+                    status: cashSession.status || 'open',
+                    openedAt: cashSession.openedAt || null,
+                    closedAt: cashSession.closedAt || null,
+                    reopenedAt: cashSession.reopenedAt || null,
+                    closeCount: cashSession.closeCount || 0,
+                    reopenCount: cashSession.reopenCount || 0,
+                    transactionCount: transactions.length,
+                    transactionCountAtClose: cashSession.transactionCountAtClose || null,
+                    exportedAt: exportedAt,
+                    exportCountBeforeThisExport: cashSession.exportCount || 0,
+                    supersedesFileName: cashSession.lastExportFileName || null
                 },
                 data: {
                     masterData: {
@@ -3641,7 +3800,56 @@
             };
         }
 
+        function canExportClosedCashSession() {
+            if (cashSession.status === 'closed') return true;
+            showMessage('⚠️ Sluit eerst de kassa af. Export is pas beschikbaar na afsluiten.', 'warning');
+            showKassaPopup();
+            return false;
+        }
+
+        function buildKassaExportFileName() {
+            const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14);
+            return `kassa-export-${eventId}-${deviceId}-${timestamp}.json`;
+        }
+
+        async function exportKassaToGoogleDrive() {
+            if (!canExportClosedCashSession()) return;
+            if (AppState.exportBusy) return;
+
+            if (!kassaGDriveIsTokenValid()) {
+                renderKassaDriveSyncStatus('Verbind eerst met Google Drive om te exporteren.');
+                kassaGDriveConnect();
+                return;
+            }
+
+            AppState.exportBusy = true;
+            const fileName = buildKassaExportFileName();
+            try {
+                migrateExportContractData();
+                const payload = buildKassaExport();
+                await kassaGDriveUploadJson(fileName, payload);
+                cashSession = {
+                    ...cashSession,
+                    exportCount: (cashSession.exportCount || 0) + 1,
+                    lastExportedAt: payload.export.exportedAt,
+                    lastExportFileName: fileName
+                };
+                saveCashSession();
+                renderCashSessionStatus();
+                renderKassaDriveSyncStatus(`✓ Kassa-export opgeslagen in Google Drive: ${fileName}`);
+                showMessage('✅ Kassa-export opgeslagen in Google Drive.', 'success');
+            } catch (error) {
+                const msg = error && error.message ? error.message : String(error);
+                localStorage.setItem('kassatool_gdrive_last_error', msg);
+                renderKassaDriveSyncStatus(`Kassa-export mislukt: ${msg}`);
+                showMessage(`❌ Kassa-export mislukt: ${msg}`, 'error');
+            } finally {
+                AppState.exportBusy = false;
+            }
+        }
+
         function downloadJSON() {
+            if (!canExportClosedCashSession()) return;
             migrateExportContractData();
             const data = buildKassaExport();
 
@@ -3650,7 +3858,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `kassa_${new Date().toISOString().split('T')[0]}.json`;
+            a.download = buildKassaExportFileName();
             a.click();
         }
 
@@ -3663,6 +3871,8 @@
                 localStorage.removeItem('kassa_event');
                 localStorage.removeItem('kassa_kassabewegingen');
                 localStorage.removeItem('kassa_startbedrag');
+                localStorage.removeItem(CASH_SESSION_STORAGE_KEY);
+                cashSession = defaultCashSession();
 
                 loadEventInfo();
                 renderPrijslijst();
@@ -3671,6 +3881,7 @@
                 renderKassabewegingen();
                 loadStartbedrag();
                 updateKasstand();
+                renderCashSessionStatus();
                 showMessage('🗑️ Reset klaar - Personen en prijslijst behouden!', 'success');
             }
         }
