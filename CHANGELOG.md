@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.4
+- Google Drive eventmap-ondersteuning toegevoegd met veilige root-fallback.
+- Prijslijst laden probeert eerst `EventToolSync / eventmap / 01-prijslijst` en valt terug op de bestaande root-file `kassa-tool-official-start-pricelist.json`.
+- Kassa-export blijft naar root schrijven en bewaart daarnaast een archiefkopie in `EventToolSync / eventmap / 02-kassa-exports`.
+- Offline tabletwerking, transactielogica, kassasluiting en exportcontract `be.zomerfeest.kassa-export` versie `1.0.0` blijven ongewijzigd.
+
 ## 1.4.3
 - Kassapunt/tabletnaam en gebruiker/verantwoordelijke toegevoegd aan de Event-tab.
 - Kassapunt en gebruiker worden zichtbaar getoond in de header naast de versie en vóór de KASSA-knop.
