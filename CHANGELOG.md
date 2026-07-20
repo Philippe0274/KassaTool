@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.6
+- Hersteld: de onderste knop in de Kassa-tab is nu statusbewust.
+- Bij open kassa staat onderaan alleen "AFSLUITEN KASSA".
+- Na definitieve afsluiting verdwijnt die afsluitknop en verschijnen direct in de Kassa-tab "Export naar Drive", "JSON downloaden" en "Kassa heropenen".
+- Geen wijziging aan transacties, prijslijst, Drive-exportpayload of het officiële exportcontract.
+
 ## 1.4.5
 - Hersteld: de knop "AFSLUITEN KASSA" opent nog steeds eerst de kaspreview, maar toont nu ook een duidelijke actie "Kassa definitief afsluiten".
 - De afsluitpreview gebruikt opnieuw de bestaande afsluitlogica, waardoor de exportknoppen pas na echte afsluiting zichtbaar worden.
