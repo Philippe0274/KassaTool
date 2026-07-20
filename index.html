@@ -874,7 +874,7 @@
                 </svg>
                 <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
                     <h1 style="white-space: nowrap;">💳 Kassa Tool</h1>
-                    <span id="app_version_badge" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);border-radius:999px;padding:4px 9px;font-size:0.78em;font-weight:800;">v1.4.4</span>
+                    <span id="app_version_badge" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);border-radius:999px;padding:4px 9px;font-size:0.78em;font-weight:800;">v1.4.5</span>
                 </div>
             </div>
             <div class="app-header-actions">
@@ -1518,7 +1518,7 @@
     <script>
         // Data
         const AppState = {
-            version: "1.4.4",
+            version: "1.4.5",
             safeToReload: true,
             transactionOpen: false,
             exportBusy: false,
@@ -4053,12 +4053,27 @@
 
             document.getElementById('rap_eindsaldo').textContent = `€ ${eindsaldo.toFixed(2)}`;
 
+            const rapportButtons = document.getElementById('rapport_buttons');
+            if (rapportButtons) {
+                rapportButtons.innerHTML = mode === 'close' ? `
+                    <button class="btn btn-primary" style="padding: 15px 40px;" onclick="closePreview()">✕ Preview Sluiten</button>
+                    <button class="btn btn-danger" style="padding: 15px 40px;" onclick="confirmCloseCashSessionFromPreview()">🔒 Kassa definitief afsluiten</button>
+                ` : `
+                    <button class="btn btn-primary" style="padding: 15px 40px;" onclick="closePreview()">✕ Preview Sluiten</button>
+                `;
+            }
+
             // Show modal
             document.getElementById('previewModal').classList.add('show');
         }
 
         function closePreview() {
             document.getElementById('previewModal').classList.remove('show');
+        }
+
+        function confirmCloseCashSessionFromPreview() {
+            closePreview();
+            closeCashSession();
         }
 
         // ========== EXPORT & RESET ==========

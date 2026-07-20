@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.5
+- Hersteld: de knop "AFSLUITEN KASSA" opent nog steeds eerst de kaspreview, maar toont nu ook een duidelijke actie "Kassa definitief afsluiten".
+- De afsluitpreview gebruikt opnieuw de bestaande afsluitlogica, waardoor de exportknoppen pas na echte afsluiting zichtbaar worden.
+- Geen wijziging aan transacties, prijslijst, Google Drive-prijslijstimport of het officiële exportcontract.
+
 ## 1.4.4
 - Google Drive eventmap-ondersteuning toegevoegd met veilige root-fallback.
 - Prijslijst laden probeert eerst `EventToolSync / eventmap / 01-prijslijst` en valt terug op de bestaande root-file `kassa-tool-official-start-pricelist.json`.
