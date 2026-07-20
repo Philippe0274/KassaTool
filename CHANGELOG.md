@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.7
+- Export naar Drive geeft nu onmiddellijk zichtbare feedback op de tablet: "Kassa-export wordt voorbereid" en "Export bezig".
+- De exportknoppen worden tijdelijk uitgeschakeld tijdens export om dubbele klikken te vermijden.
+- Wanneer Google Drive niet verbonden is, verschijnt nu een duidelijke melding dat eerst verbonden moet worden en daarna opnieuw geëxporteerd moet worden.
+- Geen wijziging aan transacties, kassasluiting, prijslijst, exportpayload of het officiële exportcontract.
+
 ## 1.4.6
 - Hersteld: de onderste knop in de Kassa-tab is nu statusbewust.
 - Bij open kassa staat onderaan alleen "AFSLUITEN KASSA".

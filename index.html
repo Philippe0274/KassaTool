@@ -874,7 +874,7 @@
                 </svg>
                 <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
                     <h1 style="white-space: nowrap;">💳 Kassa Tool</h1>
-                    <span id="app_version_badge" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);border-radius:999px;padding:4px 9px;font-size:0.78em;font-weight:800;">v1.4.6</span>
+                    <span id="app_version_badge" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);border-radius:999px;padding:4px 9px;font-size:0.78em;font-weight:800;">v1.4.7</span>
                 </div>
             </div>
             <div class="app-header-actions">
@@ -1211,7 +1211,7 @@
                         <div id="kassa_tab_session_status" style="margin-bottom:10px;font-weight:800;color:#4a6b3a;">Kassa open</div>
                         <button id="kassa_tab_close_preview_btn" class="btn btn-danger" style="width: 100%; padding: 15px; font-size: 1em;" onclick="showPreview('close')">🔒 AFSLUITEN KASSA</button>
                         <div id="kassa_tab_closed_actions" style="display:none;grid-template-columns:1fr 1fr;gap:10px;">
-                            <button class="btn btn-success" style="padding: 15px; font-size: 1em;" onclick="exportKassaToGoogleDrive()">☁️ Export naar Drive</button>
+                            <button id="kassa_tab_drive_export_btn" class="btn btn-success" style="padding: 15px; font-size: 1em;" onclick="exportKassaToGoogleDrive()">☁️ Export naar Drive</button>
                             <button class="btn btn-primary" style="padding: 15px; font-size: 1em;" onclick="downloadJSON()">📥 JSON downloaden</button>
                             <button class="btn btn-warning" style="grid-column:1 / -1;padding: 12px; font-size: 0.95em;" onclick="reopenCashSession()">🔓 Kassa heropenen voor extra verkoop</button>
                         </div>
@@ -1524,7 +1524,7 @@
     <script>
         // Data
         const AppState = {
-            version: "1.4.6",
+            version: "1.4.7",
             safeToReload: true,
             transactionOpen: false,
             exportBusy: false,
@@ -1676,6 +1676,24 @@
 
             const kassaTabClosedActions = document.getElementById('kassa_tab_closed_actions');
             if (kassaTabClosedActions) kassaTabClosedActions.style.display = isClosed ? 'grid' : 'none';
+
+            const kassaTabDriveExportBtn = document.getElementById('kassa_tab_drive_export_btn');
+            if (kassaTabDriveExportBtn) {
+                kassaTabDriveExportBtn.disabled = !!AppState.exportBusy;
+                kassaTabDriveExportBtn.textContent = AppState.exportBusy ? '⏳ Export bezig...' : '☁️ Export naar Drive';
+            }
+        }
+
+        function renderKassaExportBusyState(isBusy) {
+            AppState.exportBusy = !!isBusy;
+            const buttons = [
+                document.getElementById('cash_session_drive_export_btn'),
+                document.getElementById('kassa_tab_drive_export_btn')
+            ].filter(Boolean);
+            buttons.forEach(btn => {
+                btn.disabled = AppState.exportBusy;
+                btn.textContent = AppState.exportBusy ? '⏳ Export bezig...' : '☁️ Export naar Drive';
+            });
         }
 
         function ensureCashSessionAllowsTransaction() {
@@ -4346,17 +4364,19 @@
         }
 
         async function exportKassaToGoogleDrive() {
+            showMessage('⏳ Kassa-export wordt voorbereid...', 'warning');
             if (!canExportClosedCashSession()) return;
             if (!confirmExportIdentityIfMissing()) return;
             if (AppState.exportBusy) return;
 
             if (!kassaGDriveIsTokenValid()) {
                 renderKassaDriveSyncStatus('Verbind eerst met Google Drive om te exporteren.');
+                showMessage('⚠️ Verbind eerst met Google Drive. Klik daarna opnieuw op Export naar Drive.', 'warning');
                 kassaGDriveConnect();
                 return;
             }
 
-            AppState.exportBusy = true;
+            renderKassaExportBusyState(true);
             const fileName = buildKassaExportFileName();
             try {
                 migrateExportContractData();
@@ -4383,7 +4403,7 @@
                 renderKassaDriveSyncStatus(`Kassa-export mislukt: ${msg}`);
                 showMessage(`❌ Kassa-export mislukt: ${msg}`, 'error');
             } finally {
-                AppState.exportBusy = false;
+                renderKassaExportBusyState(false);
             }
         }
 
