@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.9
+- Tablet-statusbalk toegevoegd onder de header met event, kassapunt, gebruiker, prijslijststatus, kassastatus, transacties en exportstatus.
+- Eén duidelijke hoofdactie toegevoegd die automatisch de juiste bestaande stap uitvoert: Google Drive verbinden, prijslijst laden, nieuwe transactie openen of export naar Drive starten.
+- De statusbalk werkt ook op tablet/smalle schermen in een compacte tweekoloms layout.
+- Geen wijziging aan transactielogica, prijslijstinhoud, kassasluiting, Drive-exportpayload of het officiële exportcontract.
+
 ## 1.4.8
 - PDM-logo toegevoegd rechts in de Kassa Tool-header.
 - Het logo blijft compact zodat de tabletbediening centraal blijft.

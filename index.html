@@ -70,6 +70,54 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+        .tablet-statusbar {
+            background: #fff8ed;
+            border-bottom: 1px solid #e2d2bb;
+            padding: 8px 14px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .tablet-statusbar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(88px, 1fr));
+            gap: 6px;
+            min-width: 0;
+        }
+        .tablet-status-pill {
+            background: #fffdf8;
+            border: 1px solid #dfccb2;
+            border-radius: 7px;
+            padding: 6px 8px;
+            min-width: 0;
+        }
+        .tablet-status-label {
+            color: #7f6b50;
+            display: block;
+            font-size: 0.66em;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+        .tablet-status-value {
+            color: #1f1a14;
+            display: block;
+            font-size: 0.88em;
+            font-weight: 900;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .tablet-status-value.ok { color: #2f6b26; }
+        .tablet-status-value.warn { color: #b56a00; }
+        .tablet-status-value.danger { color: #b3261e; }
+        .tablet-status-action {
+            min-width: 170px;
+            padding: 12px 14px;
+            white-space: nowrap;
+        }
         
         /* Logo styling */
         .app-header img {
@@ -850,6 +898,9 @@
             font-weight: 900;
         }
         @media (max-width: 900px) {
+            .tablet-statusbar { grid-template-columns: 1fr; padding: 7px 10px; }
+            .tablet-statusbar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .tablet-status-action { width: 100%; min-width: 0; padding: 12px; }
             .retro-body { grid-template-columns: 1fr; overflow-y: auto; }
             .retro-article-grid { max-height: none; }
             .retro-display { min-width: 190px; font-size: 1.55em; }
@@ -890,7 +941,7 @@
                 </svg>
                 <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
                     <h1 style="white-space: nowrap;">💳 Kassa Tool</h1>
-                    <span id="app_version_badge" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);border-radius:999px;padding:4px 9px;font-size:0.78em;font-weight:800;">v1.4.8</span>
+                    <span id="app_version_badge" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);border-radius:999px;padding:4px 9px;font-size:0.78em;font-weight:800;">v1.4.9</span>
                 </div>
             </div>
             <div class="app-header-actions">
@@ -904,6 +955,39 @@
                 <button class="btn btn-warning btn-sm" onclick="showLeegmakenDialog()">🗑️ RESET</button>
                 <img src="./pdm-logo.png" alt="PDM" class="pdm-header-logo" onerror="this.style.display='none'">
             </div>
+        </div>
+        <div class="tablet-statusbar" aria-label="Tablet status">
+            <div class="tablet-statusbar-grid">
+                <div class="tablet-status-pill">
+                    <span class="tablet-status-label">Event</span>
+                    <span id="tablet_status_event" class="tablet-status-value">-</span>
+                </div>
+                <div class="tablet-status-pill">
+                    <span class="tablet-status-label">Kassapunt</span>
+                    <span id="tablet_status_device" class="tablet-status-value">Ontbreekt</span>
+                </div>
+                <div class="tablet-status-pill">
+                    <span class="tablet-status-label">Gebruiker</span>
+                    <span id="tablet_status_operator" class="tablet-status-value">Ontbreekt</span>
+                </div>
+                <div class="tablet-status-pill">
+                    <span class="tablet-status-label">Prijslijst</span>
+                    <span id="tablet_status_pricelist" class="tablet-status-value warn">Niet geladen</span>
+                </div>
+                <div class="tablet-status-pill">
+                    <span class="tablet-status-label">Kassa</span>
+                    <span id="tablet_status_session" class="tablet-status-value">Open</span>
+                </div>
+                <div class="tablet-status-pill">
+                    <span class="tablet-status-label">Transacties</span>
+                    <span id="tablet_status_transactions" class="tablet-status-value">0</span>
+                </div>
+                <div class="tablet-status-pill">
+                    <span class="tablet-status-label">Export</span>
+                    <span id="tablet_status_export" class="tablet-status-value warn">Nog niet</span>
+                </div>
+            </div>
+            <button id="tablet_status_main_action" class="btn btn-primary tablet-status-action" type="button" onclick="handleTabletStatusMainAction()">Prijslijst laden</button>
         </div>
 
         <!-- Main -->
@@ -1541,7 +1625,7 @@
     <script>
         // Data
         const AppState = {
-            version: "1.4.8",
+            version: "1.4.9",
             safeToReload: true,
             transactionOpen: false,
             exportBusy: false,
@@ -1640,6 +1724,92 @@
             return date.toLocaleString('nl-BE', { dateStyle: 'short', timeStyle: 'short' });
         }
 
+        function setTabletStatusValue(id, text, statusClass = '') {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = text;
+            el.className = `tablet-status-value ${statusClass}`.trim();
+            el.title = text;
+        }
+
+        function renderTabletStatusBar() {
+            const stats = currentPriceListStats();
+            const officialLoaded = hasOfficialPriceListLoaded();
+            const connected = kassaGDriveIsTokenValid();
+            const isClosed = cashSession.status === 'closed';
+            const hasExport = !!cashSession.lastExportedAt;
+            const eventLabel = [eventInfo.naam, eventInfo.datum].filter(Boolean).join(' · ') || 'Event ontbreekt';
+            const deviceLabel = deviceFriendlyName || localStorage.getItem(DEVICE_FRIENDLY_NAME_STORAGE_KEY) || 'Ontbreekt';
+            const operatorLabel = operatorName || localStorage.getItem(OPERATOR_NAME_STORAGE_KEY) || 'Ontbreekt';
+
+            setTabletStatusValue('tablet_status_event', eventLabel, eventInfo.naam ? 'ok' : 'warn');
+            setTabletStatusValue('tablet_status_device', deviceLabel, deviceLabel === 'Ontbreekt' ? 'warn' : 'ok');
+            setTabletStatusValue('tablet_status_operator', operatorLabel, operatorLabel === 'Ontbreekt' ? 'warn' : 'ok');
+            setTabletStatusValue(
+                'tablet_status_pricelist',
+                officialLoaded ? `${stats.total} artikelen (${stats.active} actief)` : `${stats.total || 0} artikelen`,
+                officialLoaded ? 'ok' : 'warn'
+            );
+            setTabletStatusValue('tablet_status_session', cashSessionLabel(), isClosed ? 'danger' : 'ok');
+            setTabletStatusValue('tablet_status_transactions', String(kassabewegingen.length), kassabewegingen.length ? 'ok' : '');
+            setTabletStatusValue(
+                'tablet_status_export',
+                hasExport ? `Voltooid ${formatSessionDate(cashSession.lastExportedAt)}` : 'Nog niet',
+                hasExport ? 'ok' : 'warn'
+            );
+
+            const action = document.getElementById('tablet_status_main_action');
+            if (!action) return;
+            action.disabled = !!AppState.exportBusy || !!AppState.importBusy || !!AppState.syncBusy;
+            if (!connected) {
+                action.textContent = 'Google Drive verbinden';
+                action.className = 'btn btn-warning tablet-status-action';
+            } else if (!officialLoaded && kassabewegingen.length === 0) {
+                action.textContent = 'Prijslijst laden';
+                action.className = 'btn btn-primary tablet-status-action';
+            } else if (!isClosed) {
+                action.textContent = 'Nieuwe transactie';
+                action.className = 'btn btn-success tablet-status-action';
+            } else if (!hasExport) {
+                action.textContent = AppState.exportBusy ? 'Export bezig...' : 'Export naar Drive';
+                action.className = 'btn btn-primary tablet-status-action';
+            } else {
+                action.textContent = 'Export voltooid';
+                action.className = 'btn btn-success tablet-status-action';
+            }
+        }
+
+        function clickTabButton(tabName) {
+            const btn = Array.from(document.querySelectorAll('.tab-btn')).find(button => (button.getAttribute('onclick') || '').includes(`'${tabName}'`));
+            if (btn) {
+                btn.click();
+            } else {
+                switchTab(tabName);
+            }
+        }
+
+        function handleTabletStatusMainAction() {
+            if (!kassaGDriveIsTokenValid()) {
+                kassaGDriveConnect();
+                return;
+            }
+            if (!hasOfficialPriceListLoaded() && kassabewegingen.length === 0) {
+                clickTabButton('prijslijst');
+                loadOfficialPriceListFromDrive();
+                return;
+            }
+            if (cashSession.status !== 'closed') {
+                clickTabButton('kassabewegingen');
+                showKassaPopup();
+                return;
+            }
+            if (!cashSession.lastExportedAt) {
+                exportKassaToGoogleDrive();
+                return;
+            }
+            showMessage('✅ Export is al voltooid.', 'success');
+        }
+
         function cashSessionLabel() {
             if (cashSession.status === 'closed') return 'Afgesloten';
             if (cashSession.status === 'reopened') return 'Heropend';
@@ -1699,6 +1869,7 @@
                 kassaTabDriveExportBtn.disabled = !!AppState.exportBusy;
                 kassaTabDriveExportBtn.textContent = AppState.exportBusy ? '⏳ Export bezig...' : '☁️ Export naar Drive';
             }
+            renderTabletStatusBar();
         }
 
         function renderKassaExportBusyState(isBusy) {
@@ -1711,6 +1882,7 @@
                 btn.disabled = AppState.exportBusy;
                 btn.textContent = AppState.exportBusy ? '⏳ Export bezig...' : '☁️ Export naar Drive';
             });
+            renderTabletStatusBar();
         }
 
         function ensureCashSessionAllowsTransaction() {
@@ -2105,6 +2277,7 @@
             const lockStatus = document.getElementById('gdrive_event_lock_status');
             const offlineReady = document.getElementById('gdrive_offline_ready_status');
             const messageBox = document.getElementById('gdrive_sync_message');
+            renderTabletStatusBar();
             if (!badge || !last || !eventLabel || !count || !messageBox) return;
 
             const connected = kassaGDriveIsTokenValid();
@@ -2242,7 +2415,11 @@
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(tab).classList.add('active');
-            event.target.classList.add('active');
+            const activeEvent = typeof event !== 'undefined' ? event : null;
+            const activeButton = activeEvent && activeEvent.target
+                ? activeEvent.target
+                : Array.from(document.querySelectorAll('.tab-btn')).find(button => (button.getAttribute('onclick') || '').includes(`'${tab}'`));
+            if (activeButton) activeButton.classList.add('active');
 
             if (tab === 'kassabewegingen') {
                 updateArtikelSelects();
@@ -2296,6 +2473,7 @@
                 operatorEl.title = operatorLabel ? `Gebruiker: ${operatorLabel}` : 'Gebruiker / verantwoordelijke ontbreekt';
                 operatorEl.style.background = operatorLabel ? 'rgba(255,255,255,0.18)' : 'rgba(255,193,7,0.32)';
             }
+            renderTabletStatusBar();
         }
 
         // ========== EXTERNAL TICKETS ==========
@@ -2884,6 +3062,7 @@
                     </tr>
                 `;
             }).join('');
+            renderTabletStatusBar();
         }
 
         function toggleArtikelActief(id) {
