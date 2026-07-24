@@ -941,7 +941,7 @@
                 </svg>
                 <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
                     <h1 style="white-space: nowrap;">💳 Kassa Tool</h1>
-                    <span id="app_version_badge" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);border-radius:999px;padding:4px 9px;font-size:0.78em;font-weight:800;">v1.4.10</span>
+                    <span id="app_version_badge" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);border-radius:999px;padding:4px 9px;font-size:0.78em;font-weight:800;">v1.4.11</span>
                 </div>
             </div>
             <div class="app-header-actions">
@@ -1625,7 +1625,7 @@
     <script>
         // Data
         const AppState = {
-            version: "1.4.10",
+            version: "1.4.11",
             safeToReload: true,
             transactionOpen: false,
             exportBusy: false,
@@ -1698,7 +1698,11 @@
                 reopenCount: 0,
                 exportCount: 0,
                 lastExportedAt: null,
-                lastExportFileName: ''
+                lastExportFileName: '',
+                exportDirty: false,
+                exportDirtyAt: null,
+                exportDirtyReason: '',
+                exportFingerprint: ''
             };
         }
 
@@ -1734,11 +1738,13 @@
         }
 
         function renderTabletStatusBar() {
+            reconcileExportDirtyState();
             const stats = currentPriceListStats();
             const officialLoaded = hasOfficialPriceListLoaded();
             const connected = kassaGDriveIsTokenValid();
             const isClosed = cashSession.status === 'closed';
             const hasExport = !!cashSession.lastExportedAt;
+            const exportDirty = !!cashSession.exportDirty;
             const eventLabel = [eventInfo.naam, eventInfo.datum].filter(Boolean).join(' · ') || 'Event ontbreekt';
             const deviceLabel = deviceFriendlyName || localStorage.getItem(DEVICE_FRIENDLY_NAME_STORAGE_KEY) || 'Ontbreekt';
             const operatorLabel = operatorName || localStorage.getItem(OPERATOR_NAME_STORAGE_KEY) || 'Ontbreekt';
@@ -1755,8 +1761,8 @@
             setTabletStatusValue('tablet_status_transactions', String(kassabewegingen.length), kassabewegingen.length ? 'ok' : '');
             setTabletStatusValue(
                 'tablet_status_export',
-                hasExport ? `Voltooid ${formatSessionDate(cashSession.lastExportedAt)}` : 'Nog niet',
-                hasExport ? 'ok' : 'warn'
+                exportDirty ? 'Nieuwe export nodig' : (hasExport ? `Voltooid ${formatSessionDate(cashSession.lastExportedAt)}` : 'Nog niet'),
+                exportDirty ? 'danger' : (hasExport ? 'ok' : 'warn')
             );
 
             const action = document.getElementById('tablet_status_main_action');
@@ -1771,7 +1777,7 @@
             } else if (!isClosed) {
                 action.textContent = 'Nieuwe transactie';
                 action.className = 'btn btn-success tablet-status-action';
-            } else if (!hasExport) {
+            } else if (!hasExport || exportDirty) {
                 action.textContent = AppState.exportBusy ? 'Export bezig...' : 'Export naar Drive';
                 action.className = 'btn btn-primary tablet-status-action';
             } else {
@@ -1804,11 +1810,51 @@
                 showKassaPopup();
                 return;
             }
-            if (!cashSession.lastExportedAt) {
+            if (!cashSession.lastExportedAt || cashSession.exportDirty) {
                 exportKassaToGoogleDrive();
                 return;
             }
             showMessage('✅ Export is al voltooid.', 'success');
+        }
+
+        function markExportDirty(reason = 'data gewijzigd') {
+            if (!cashSession.lastExportedAt && !cashSession.lastExportFileName) return;
+            cashSession = {
+                ...cashSession,
+                exportDirty: true,
+                exportDirtyAt: new Date().toISOString(),
+                exportDirtyReason: reason
+            };
+            saveCashSession();
+            renderCashSessionStatus();
+        }
+
+        function currentExportFingerprint() {
+            const changedArticles = (Array.isArray(prijslijst) ? prijslijst : []).filter(article => articleChangeInfo(article).length > 0).length;
+            return JSON.stringify({
+                transactions: kassabewegingen.length,
+                transactionIds: kassabewegingen.map(item => item && item.id).filter(Boolean).sort(),
+                manifiesta: manifiestaRegistrations.length,
+                manifiestaQty: manifiestaTotalTickets(),
+                external: externalTicketRegistrations.length,
+                externalQty: externalTicketTotalTickets(),
+                changedArticles,
+                openingCash: startbedrag || {}
+            });
+        }
+
+        function reconcileExportDirtyState() {
+            if (!cashSession.lastExportedAt || cashSession.exportDirty) return;
+            const currentFingerprint = currentExportFingerprint();
+            if (!cashSession.exportFingerprint || cashSession.exportFingerprint !== currentFingerprint) {
+                cashSession = {
+                    ...cashSession,
+                    exportDirty: true,
+                    exportDirtyAt: new Date().toISOString(),
+                    exportDirtyReason: cashSession.exportFingerprint ? 'gegevens gewijzigd sinds laatste export' : 'exportstatus uit oudere versie'
+                };
+                saveCashSession();
+            }
         }
 
         function cashSessionLabel() {
@@ -2509,10 +2555,12 @@
 
         function saveManifiestaRegistrations() {
             localStorage.setItem(MANIFIESTA_STORAGE_KEY, JSON.stringify(manifiestaRegistrations));
+            markExportDirty('ticketregistratie gewijzigd');
         }
 
         function saveExternalTicketRegistrations() {
             localStorage.setItem(EXTERNAL_TICKETS_STORAGE_KEY, JSON.stringify(externalTicketRegistrations));
+            markExportDirty('externe tickets gewijzigd');
         }
 
         function manifiestaTotalTickets() {
@@ -2999,6 +3047,7 @@
         function savePrijslijst() {
             localStorage.setItem(PRIJSLIJST_STORAGE_KEY, JSON.stringify(prijslijst));
             bewaarPrijslijstBackup(prijslijst);
+            markExportDirty('prijslijst gewijzigd');
         }
 
         function loadPermanentePrijslijst() {
@@ -3195,6 +3244,7 @@
             };
             
             localStorage.setItem('kassa_startbedrag', JSON.stringify(startbedrag));
+            markExportDirty('startbedrag gewijzigd');
             updateKasstand();
             showMessage('✅ Startbedrag opgeslagen!', 'success');
         }
@@ -3594,6 +3644,7 @@
             }
 
             localStorage.setItem('kassa_kassabewegingen', JSON.stringify(kassabewegingen));
+            markExportDirty(isBewerking ? 'transactie gewijzigd' : 'nieuwe transactie');
 
             resetKasTransactieForm();
             renderKassabewegingen();
@@ -3611,6 +3662,7 @@
 
             kassabewegingen = kassabewegingen.filter(t => t.id !== id);
             localStorage.setItem('kassa_kassabewegingen', JSON.stringify(kassabewegingen));
+            markExportDirty('transactie verwijderd');
             renderKassabewegingen();
             updateKasstand();
             renderKassaDriveSyncStatus();
@@ -4609,7 +4661,11 @@
                     ...cashSession,
                     exportCount: (cashSession.exportCount || 0) + 1,
                     lastExportedAt: payload.export.exportedAt,
-                    lastExportFileName: fileName
+                    lastExportFileName: fileName,
+                    exportDirty: false,
+                    exportDirtyAt: null,
+                    exportDirtyReason: '',
+                    exportFingerprint: currentExportFingerprint()
                 };
                 saveCashSession();
                 renderCashSessionStatus();

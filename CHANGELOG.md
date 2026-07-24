@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.11
+- Hersteld: na nieuwe of gewijzigde kassafeiten blijft de statusbalk niet meer foutief op "Export voltooid" staan.
+- Nieuwe transacties, transactiewijzigingen, verwijderingen, ticketregistraties, startbedragwijzigingen en prijslijstmutaties markeren de vorige export nu als verouderd.
+- De statusbalk toont dan "Nieuwe export nodig" en de hoofdknop wordt opnieuw "Export naar Drive" zodra de kassa gesloten is.
+- Succesvolle Drive-export bewaart een compacte exportvingerafdruk, zodat latere wijzigingen betrouwbaar worden herkend.
+- Geen wijziging aan transactieberekening, prijslijstinhoud, kassasluiting, Drive-exportpayload of het officiële exportcontract.
+
 ## 1.4.10
 - Google Drive herverbinden probeert nu eerst stil opnieuw te verbinden zonder Google-schermen, zoals in de Hoofdapp.
 - Alleen wanneer stille herverbinding mislukt, is een volgende interactieve Google-poging nodig.

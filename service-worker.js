@@ -1,4 +1,4 @@
-﻿const APP_VERSION = "1.4.10";
+﻿const APP_VERSION = "1.4.11";
 const CACHE_NAME = `kassa-tool-${APP_VERSION}`;
 const CACHE_PREFIX = 'kassa-tool-';
 const FALLBACK_DOCUMENTS = [
@@ -68,3 +68,4 @@ async function networkFirstDocument(request) {
         throw error;
     }
 }
+
