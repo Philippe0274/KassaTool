@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.8
+- PDM-logo toegevoegd rechts in de Kassa Tool-header.
+- Het logo blijft compact zodat de tabletbediening centraal blijft.
+- `pdm-logo.png` wordt mee gecachet voor offline gebruik op tablet.
+- Geen wijziging aan transacties, prijslijst, kassasluiting, Drive-export of het officiële exportcontract.
+
 ## 1.4.7
 - Export naar Drive geeft nu onmiddellijk zichtbare feedback op de tablet: "Kassa-export wordt voorbereid" en "Export bezig".
 - De exportknoppen worden tijdelijk uitgeschakeld tijdens export om dubbele klikken te vermijden.

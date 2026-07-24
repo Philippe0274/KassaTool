@@ -1,4 +1,4 @@
-const APP_VERSION = "1.4.7";
+const APP_VERSION = "1.4.8";
 const CACHE_NAME = `kassa-tool-${APP_VERSION}`;
 const CACHE_PREFIX = 'kassa-tool-';
 const FALLBACK_DOCUMENTS = [
@@ -9,7 +9,7 @@ const FALLBACK_DOCUMENTS = [
 self.addEventListener('install', event => {
     event.waitUntil((async () => {
         const cache = await caches.open(CACHE_NAME);
-        await cache.addAll(['./index.html']);
+        await cache.addAll(['./index.html', './pdm-logo.png']);
         await self.skipWaiting();
     })());
 });
