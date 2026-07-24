@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.10
+- Google Drive herverbinden probeert nu eerst stil opnieuw te verbinden zonder Google-schermen, zoals in de Hoofdapp.
+- Alleen wanneer stille herverbinding mislukt, is een volgende interactieve Google-poging nodig.
+- Bij terugkeer naar de tablet-app wordt automatisch opnieuw stil geprobeerd te verbinden.
+- Geen wijziging aan transacties, prijslijstinhoud, kassasluiting, Drive-exportpayload of het officiële exportcontract.
+
 ## 1.4.9
 - Tablet-statusbalk toegevoegd onder de header met event, kassapunt, gebruiker, prijslijststatus, kassastatus, transacties en exportstatus.
 - Eén duidelijke hoofdactie toegevoegd die automatisch de juiste bestaande stap uitvoert: Google Drive verbinden, prijslijst laden, nieuwe transactie openen of export naar Drive starten.

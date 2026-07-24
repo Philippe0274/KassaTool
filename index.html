@@ -941,7 +941,7 @@
                 </svg>
                 <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
                     <h1 style="white-space: nowrap;">💳 Kassa Tool</h1>
-                    <span id="app_version_badge" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);border-radius:999px;padding:4px 9px;font-size:0.78em;font-weight:800;">v1.4.9</span>
+                    <span id="app_version_badge" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);border-radius:999px;padding:4px 9px;font-size:0.78em;font-weight:800;">v1.4.10</span>
                 </div>
             </div>
             <div class="app-header-actions">
@@ -1625,7 +1625,7 @@
     <script>
         // Data
         const AppState = {
-            version: "1.4.9",
+            version: "1.4.10",
             safeToReload: true,
             transactionOpen: false,
             exportBusy: false,
@@ -1662,6 +1662,7 @@
         let kassaGDriveTokenExpiry = 0;
         let kassaGDriveSilentAuth = false;
         let kassaGDriveInitStarted = false;
+        let kassaGDriveLastSilentFailure = Number(localStorage.getItem('kassatool_gdrive_silent_failed_at') || 0);
 
         let eventInfo = JSON.parse(localStorage.getItem('kassa_event')) || {};
         let personen = JSON.parse(localStorage.getItem('kassa_personen')) || [];
@@ -1938,6 +1939,10 @@
             renderCashSessionStatus();
         });
 
+        window.addEventListener('focus', function() {
+            kassaGDriveSilentReconnect();
+        });
+
         // ========== GOOGLE DRIVE PRIJSLIJST SYNC ==========
         function kassaGDriveIsTokenValid() {
             if (!kassaGDriveAccessToken || kassaGDriveAccessToken === 'null') return false;
@@ -1946,7 +1951,8 @@
         }
 
         function kassaGDriveWantsConnection() {
-            return localStorage.getItem('kassatool_gdrive_auto_connect') === '1';
+            return localStorage.getItem('kassatool_gdrive_auto_connect') === '1'
+                || !!localStorage.getItem('kassatool_gdrive_token_expiry');
         }
 
         function kassaGDriveLoadStoredToken() {
@@ -1979,8 +1985,15 @@
                     const wasSilent = kassaGDriveSilentAuth;
                     kassaGDriveSilentAuth = false;
                     if (resp.error) {
-                        if (!wasSilent) localStorage.setItem('kassatool_gdrive_last_error', resp.error);
-                        renderKassaDriveSyncStatus();
+                        let statusMessage = '';
+                        if (wasSilent) {
+                            kassaGDriveLastSilentFailure = Date.now();
+                            localStorage.setItem('kassatool_gdrive_silent_failed_at', String(kassaGDriveLastSilentFailure));
+                            statusMessage = 'Stille herverbinding lukte niet. Tik opnieuw op Verbinden als Google toch moet openen.';
+                        } else {
+                            localStorage.setItem('kassatool_gdrive_last_error', resp.error);
+                        }
+                        renderKassaDriveSyncStatus(statusMessage);
                         return;
                     }
                     kassaGDriveAccessToken = resp.access_token;
@@ -1989,6 +2002,8 @@
                     localStorage.setItem('kassatool_gdrive_token_expiry', String(kassaGDriveTokenExpiry));
                     localStorage.setItem('kassatool_gdrive_auto_connect', '1');
                     localStorage.removeItem('kassatool_gdrive_last_error');
+                    localStorage.removeItem('kassatool_gdrive_silent_failed_at');
+                    kassaGDriveLastSilentFailure = 0;
                     renderKassaDriveSyncStatus('Google Drive verbonden.');
                 }
             });
@@ -2023,6 +2038,12 @@
                 return true;
             }
             const hasSavedConnection = kassaGDriveWantsConnection();
+            const recentSilentFailure = kassaGDriveLastSilentFailure && (Date.now() - kassaGDriveLastSilentFailure < 60000);
+            if (hasSavedConnection && !recentSilentFailure) {
+                renderKassaDriveSyncStatus('Google Drive wordt stil herverbonden...');
+                kassaGDriveSilentReconnect();
+                return true;
+            }
             kassaGDriveTokenClient.requestAccessToken({
                 prompt: hasSavedConnection ? '' : 'consent',
                 login_hint: KASSA_GDRIVE_ACCOUNT_HINT || undefined
@@ -2033,7 +2054,8 @@
         function kassaGDriveDisconnect() {
             kassaGDriveAccessToken = null;
             kassaGDriveTokenExpiry = 0;
-            ['kassatool_gdrive_token', 'kassatool_gdrive_token_expiry', 'kassatool_gdrive_auto_connect', 'kassatool_gdrive_last_error'].forEach(key => localStorage.removeItem(key));
+            ['kassatool_gdrive_token', 'kassatool_gdrive_token_expiry', 'kassatool_gdrive_auto_connect', 'kassatool_gdrive_last_error', 'kassatool_gdrive_silent_failed_at'].forEach(key => localStorage.removeItem(key));
+            kassaGDriveLastSilentFailure = 0;
             renderKassaDriveSyncStatus('Google Drive ontkoppeld. De lokaal geladen prijslijst blijft offline beschikbaar.');
         }
 
