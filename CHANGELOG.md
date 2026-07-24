@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.4.13
+- Prijslijst laden gebruikt nu eerst `eventtool-events-index.json` uit EventToolSync.
+- De tablet toont/bevestigt het beschikbare event vóór de officiële beginprijslijst wordt geladen.
+- Het gekozen event wordt lokaal bewaard met eventId, naam, datum, locatie, prijslijstbron en eventmap.
+- Als de event-index ontbreekt, blijft de bestaande fallback naar de oude prijslijstroute beschikbaar.
+- Geen wijziging aan transacties, kassasluiting, exportpayload, betaalregels of het officiële exportcontract.
+
+## 1.4.12
+- Google Drive-status betrouwbaarder gemaakt: vóór export wordt nu een echte Drive-controle uitgevoerd.
+- Als Google het token weigert met 401/403, wist de Kassa Tool het lokale token en toont niet langer foutief "Verbonden".
+- Uploadfouten tonen nu meer detail uit de Google Drive-response, zodat duidelijker is waarom export mislukt.
+- De gebruiker krijgt bij verlopen sessie expliciet de melding om opnieuw te verbinden.
+- Geen wijziging aan transacties, prijslijstinhoud, kassasluiting, Drive-exportpayload of het officiële exportcontract.
+
 ## 1.4.11
 - Hersteld: na nieuwe of gewijzigde kassafeiten blijft de statusbalk niet meer foutief op "Export voltooid" staan.
 - Nieuwe transacties, transactiewijzigingen, verwijderingen, ticketregistraties, startbedragwijzigingen en prijslijstmutaties markeren de vorige export nu als verouderd.

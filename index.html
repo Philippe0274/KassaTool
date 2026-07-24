@@ -941,7 +941,7 @@
                 </svg>
                 <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
                     <h1 style="white-space: nowrap;">💳 Kassa Tool</h1>
-                    <span id="app_version_badge" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);border-radius:999px;padding:4px 9px;font-size:0.78em;font-weight:800;">v1.4.11</span>
+                    <span id="app_version_badge" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);border-radius:999px;padding:4px 9px;font-size:0.78em;font-weight:800;">v1.4.13</span>
                 </div>
             </div>
             <div class="app-header-actions">
@@ -1625,7 +1625,7 @@
     <script>
         // Data
         const AppState = {
-            version: "1.4.11",
+            version: "1.4.13",
             safeToReload: true,
             transactionOpen: false,
             exportBusy: false,
@@ -1653,6 +1653,9 @@
         const KASSA_SYNC_FOLDER_URL = `https://drive.google.com/drive/folders/${KASSA_SYNC_FOLDER_ID}`;
         const KASSA_DRIVE_TEST_FILE_NAME = 'kassa-tool-connection-test.json';
         const KASSA_DRIVE_PRICELIST_FILE_NAME = 'kassa-tool-official-start-pricelist.json';
+        const KASSA_DRIVE_EVENTS_INDEX_FILE_NAME = 'eventtool-events-index.json';
+        const KASSA_EVENTS_INDEX_SCHEMA_NAME = 'be.zomerfeest.eventtool-events-index';
+        const KASSA_EVENTS_INDEX_SCHEMA_VERSION = '1.0.0';
         const KASSA_START_PRICE_LIST_SCHEMA_NAME = 'be.zomerfeest.hoofdapp-official-start-pricelist';
         const KASSA_START_PRICE_LIST_SCHEMA_VERSION = '1.0.0';
         const KASSA_PRICELIST_SYNC_META_KEY = 'kassa_prijslijst_sync_meta';
@@ -2015,6 +2018,38 @@
             }
         }
 
+        function kassaGDriveClearInvalidToken(message = 'Google Drive-sessie verlopen. Verbind opnieuw.') {
+            kassaGDriveAccessToken = null;
+            kassaGDriveTokenExpiry = 0;
+            ['kassatool_gdrive_token', 'kassatool_gdrive_token_expiry', 'kassatool_gdrive_silent_failed_at'].forEach(key => localStorage.removeItem(key));
+            localStorage.setItem('kassatool_gdrive_last_error', message);
+            kassaGDriveLastSilentFailure = Date.now();
+            localStorage.setItem('kassatool_gdrive_silent_failed_at', String(kassaGDriveLastSilentFailure));
+            renderKassaDriveSyncStatus(message);
+        }
+
+        async function kassaGDriveVerifyConnection() {
+            if (!kassaGDriveIsTokenValid()) return false;
+            try {
+                const response = await fetch(`https://www.googleapis.com/drive/v3/files/${KASSA_SYNC_FOLDER_ID}?fields=id,name`, {
+                    headers: { Authorization: `Bearer ${kassaGDriveAccessToken}` }
+                });
+                if (response.status === 401 || response.status === 403) {
+                    kassaGDriveClearInvalidToken('Google Drive-sessie verlopen. Verbind opnieuw.');
+                    return false;
+                }
+                if (!response.ok) throw new Error(`Drive controle mislukt: ${response.status}`);
+                localStorage.removeItem('kassatool_gdrive_last_error');
+                renderKassaDriveSyncStatus('Google Drive verbonden.');
+                return true;
+            } catch (error) {
+                const msg = error && error.message ? error.message : String(error);
+                localStorage.setItem('kassatool_gdrive_last_error', msg);
+                renderKassaDriveSyncStatus(`Drive controle mislukt: ${msg}`);
+                return false;
+            }
+        }
+
         function initKassaGoogleDrive() {
             if (kassaGDriveInitStarted && kassaGDriveTokenClient) return;
             kassaGDriveInitStarted = true;
@@ -2073,15 +2108,15 @@
             }
         }
 
-        function kassaGDriveConnect() {
+        async function kassaGDriveConnect() {
             if (!kassaGDriveTokenClient) {
                 initKassaGoogleDrive();
                 renderKassaDriveSyncStatus('Google Drive wordt voorbereid. Tik zo nodig opnieuw op Verbinden.');
                 return false;
             }
             if (kassaGDriveIsTokenValid()) {
-                renderKassaDriveSyncStatus('Google Drive is verbonden.');
-                return true;
+                renderKassaDriveSyncStatus('Google Drive wordt gecontroleerd...');
+                return await kassaGDriveVerifyConnection();
             }
             const hasSavedConnection = kassaGDriveWantsConnection();
             const recentSilentFailure = kassaGDriveLastSilentFailure && (Date.now() - kassaGDriveLastSilentFailure < 60000);
@@ -2195,7 +2230,12 @@
         async function kassaGDriveDownloadJson(fileName, parentId = KASSA_SYNC_FOLDER_ID) {
             const files = await kassaGDriveSearchFile(fileName, parentId);
             if (!files.length) throw new Error(`Bestand niet gevonden: ${fileName}`);
-            const response = await fetch(`https://www.googleapis.com/drive/v3/files/${files[0].id}?alt=media`, {
+            return await kassaGDriveDownloadJsonFile(files[0]);
+        }
+
+        async function kassaGDriveDownloadJsonFile(file) {
+            if (!file || !file.id) throw new Error('Drive-bestand ontbreekt.');
+            const response = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, {
                 headers: { Authorization: `Bearer ${kassaGDriveAccessToken}` }
             });
             if (!response.ok) throw new Error(`Drive download failed: ${response.status}`);
@@ -2215,11 +2255,100 @@
                 headers: { Authorization: `Bearer ${kassaGDriveAccessToken}` },
                 body: form
             });
-            if (!response.ok) throw new Error(`Drive upload failed: ${response.status}`);
+            if (!response.ok) {
+                let details = '';
+                try {
+                    const errorPayload = await response.json();
+                    details = errorPayload && errorPayload.error && (errorPayload.error.message || errorPayload.error.status)
+                        ? ` - ${errorPayload.error.message || errorPayload.error.status}`
+                        : '';
+                } catch (parseError) {
+                    details = '';
+                }
+                if (response.status === 401 || response.status === 403) {
+                    kassaGDriveClearInvalidToken('Google Drive-sessie verlopen. Verbind opnieuw.');
+                }
+                throw new Error(`Drive upload failed: ${response.status}${details}`);
+            }
             return await response.json();
         }
 
+        function validateKassaEventsIndexPayload(payload) {
+            const errors = [];
+            if (!payload || typeof payload !== 'object') errors.push('Event-index is ongeldig.');
+            if (payload && payload.schemaName !== KASSA_EVENTS_INDEX_SCHEMA_NAME) errors.push('Onbekend event-indexschema.');
+            if (payload && payload.schemaVersion !== KASSA_EVENTS_INDEX_SCHEMA_VERSION) errors.push('Onbekende event-index schemaVersion.');
+            if (!payload || !Array.isArray(payload.events) || payload.events.length === 0) errors.push('Geen events gevonden in event-index.');
+            return errors;
+        }
+
+        function eventIndexLabel(event) {
+            return [event && event.name || '', event && event.date || '', event && event.location || ''].filter(Boolean).join(' · ') || 'Naamloos event';
+        }
+
+        async function kassaGDriveDownloadEventsIndex() {
+            const payload = await kassaGDriveDownloadJson(KASSA_DRIVE_EVENTS_INDEX_FILE_NAME);
+            const errors = validateKassaEventsIndexPayload(payload);
+            if (errors.length) throw new Error(errors.join(' | '));
+            return payload;
+        }
+
+        function chooseEventFromIndex(eventsIndex) {
+            const events = (eventsIndex && Array.isArray(eventsIndex.events) ? eventsIndex.events : [])
+                .filter(item => item && item.eventId && item.priceList && item.priceList.fileName);
+            if (!events.length) throw new Error('Geen bruikbaar event met prijslijst gevonden in event-index.');
+            if (events.length === 1) {
+                const selected = events[0];
+                const ok = confirm(`Event gebruiken?\n\n${eventIndexLabel(selected)}\n\nDaarna wordt de officiële beginprijslijst geladen.`);
+                if (!ok) throw new Error('Prijslijst laden geannuleerd.');
+                return selected;
+            }
+            const list = events.map((item, index) => `${index + 1}. ${eventIndexLabel(item)}`).join('\n');
+            const answer = prompt(`Kies het event waarvoor deze tablet gebruikt wordt:\n\n${list}\n\nGeef het nummer in:`, '1');
+            const number = Number(String(answer || '').trim());
+            if (!Number.isInteger(number) || number < 1 || number > events.length) throw new Error('Geen geldig event gekozen.');
+            return events[number - 1];
+        }
+
+        async function kassaGDriveFindEventFolderFromIndexEvent(indexEvent) {
+            if (indexEvent && indexEvent.folderName) {
+                const exact = await kassaGDriveFindFolder(indexEvent.folderName);
+                if (exact) return exact;
+            }
+            return await kassaGDriveFindEventFolder(null, {
+                naam: indexEvent && indexEvent.name || '',
+                datum: indexEvent && indexEvent.date || '',
+                locatie: indexEvent && indexEvent.location || ''
+            });
+        }
+
+        async function kassaGDriveDownloadOfficialPriceListForEvent(indexEvent) {
+            const fileName = indexEvent && indexEvent.priceList && indexEvent.priceList.fileName || KASSA_DRIVE_PRICELIST_FILE_NAME;
+            const eventFolder = await kassaGDriveFindEventFolderFromIndexEvent(indexEvent);
+            if (eventFolder) {
+                const priceListFolder = await kassaGDriveFindFolder('01-prijslijst', eventFolder.id);
+                if (priceListFolder) {
+                    const files = await kassaGDriveSearchFile(fileName, priceListFolder.id);
+                    if (files.length) {
+                        const payload = await kassaGDriveDownloadJsonFile(files[0]);
+                        return { payload, source: 'event-index/eventmap/01-prijslijst', selectedEvent: indexEvent };
+                    }
+                }
+            }
+            const rootPayload = await kassaGDriveDownloadJson(fileName);
+            return { payload: rootPayload, source: 'event-index/root', selectedEvent: indexEvent };
+        }
+
         async function kassaGDriveDownloadOfficialPriceList() {
+            try {
+                const eventsIndex = await kassaGDriveDownloadEventsIndex();
+                const selectedEvent = chooseEventFromIndex(eventsIndex);
+                return await kassaGDriveDownloadOfficialPriceListForEvent(selectedEvent);
+            } catch (indexError) {
+                const msg = indexError && indexError.message ? indexError.message : String(indexError);
+                if (/geannuleerd|Geen geldig event gekozen/i.test(msg)) throw indexError;
+                console.warn('Event-index niet gebruikt, fallback naar oude prijslijstroute:', indexError);
+            }
             const eventFolder = await kassaGDriveFindEventFolder(null, eventInfo);
             if (eventFolder) {
                 const priceListFolder = await kassaGDriveFindFolder('01-prijslijst', eventFolder.id);
@@ -2354,7 +2483,7 @@
             const officialLoaded = hasOfficialPriceListLoaded();
             const locked = kassabewegingen.length > 0;
             badge.className = `sync-badge ${connected ? 'ok' : 'warn'}`;
-            badge.textContent = connected ? 'Verbonden' : (kassaGDriveWantsConnection() ? 'Herverbinden mogelijk' : 'Niet verbonden');
+            badge.textContent = connected ? 'Verbonden' : (kassaGDriveWantsConnection() ? 'Controle nodig' : 'Niet verbonden');
             last.textContent = meta.loadedAt ? new Date(meta.loadedAt).toLocaleString('nl-BE') : 'Nog nooit';
             eventLabel.textContent = meta.eventName || eventInfo.naam || '-';
             count.textContent = String(stats.total);
@@ -2440,10 +2569,12 @@
                 prijslijst = importedPriceList;
                 eventId = payload.eventId;
                 localStorage.setItem(EVENT_ID_STORAGE_KEY, eventId);
+                const selectedEvent = downloaded.selectedEvent || {};
                 eventInfo = {
                     ...eventInfo,
-                    naam: payload.eventName || eventInfo.naam || '',
-                    datum: payload.eventDate || eventInfo.datum || ''
+                    naam: payload.eventName || selectedEvent.name || eventInfo.naam || '',
+                    datum: payload.eventDate || selectedEvent.date || eventInfo.datum || '',
+                    locatie: selectedEvent.location || eventInfo.locatie || ''
                 };
                 localStorage.setItem('kassa_event', JSON.stringify(eventInfo));
                 savePrijslijst();
@@ -2453,12 +2584,15 @@
                     schemaName: payload.schemaName,
                     schemaVersion: payload.schemaVersion,
                     eventId: payload.eventId,
-                    eventName: payload.eventName || '',
-                    eventDate: payload.eventDate || '',
+                    eventName: payload.eventName || selectedEvent.name || '',
+                    eventDate: payload.eventDate || selectedEvent.date || '',
+                    eventLocation: selectedEvent.location || '',
                     articleCount: importedPriceList.length,
                     activeArticleCount: importedPriceList.filter(article => article.actief !== false).length,
                     fileName: KASSA_DRIVE_PRICELIST_FILE_NAME,
-                    driveSource: downloaded.source
+                    driveSource: downloaded.source,
+                    eventsIndexFileName: downloaded.selectedEvent ? KASSA_DRIVE_EVENTS_INDEX_FILE_NAME : '',
+                    selectedEventFolderName: selectedEvent.folderName || ''
                 });
 
                 loadEventInfo();
@@ -4643,6 +4777,11 @@
                 renderKassaDriveSyncStatus('Verbind eerst met Google Drive om te exporteren.');
                 showMessage('⚠️ Verbind eerst met Google Drive. Klik daarna opnieuw op Export naar Drive.', 'warning');
                 kassaGDriveConnect();
+                return;
+            }
+            const driveVerified = await kassaGDriveVerifyConnection();
+            if (!driveVerified) {
+                showMessage('⚠️ Google Drive-sessie verlopen. Verbind opnieuw en probeer daarna opnieuw te exporteren.', 'warning');
                 return;
             }
 
